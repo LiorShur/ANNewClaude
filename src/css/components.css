@@ -1,0 +1,78 @@
+/* UI Components */
+
+button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+button:hover:not(:disabled) {
+  background-color: #45a049;
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.round-button {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.nav-button {
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.stat-display {
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 16px;
+  color: white;
+}
+
+.separator {
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0 8px;
+}
+
+input[type="file"] {
+  display: none;
+}
+
+/* Compass */
+#compass-needle {
+  width: 2px;
+  height: 20px;
+  background: #e74c3c;
+  transform-origin: bottom center;
+}
+
+#compass-center {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: #333;
+  border-radius: 50%;
+}
