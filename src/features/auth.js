@@ -441,118 +441,46 @@ if (loadCloudRoutesBtn) {
 
   // Cloud functionality methods
 // FIXED: Cloud save functionality - handles both current and saved routes
+// UPDATED: Simplified cloud save for auth controller (legacy route selection)
 async saveCurrentRouteToCloud() {
   if (!this.currentUser) {
     this.showAuthError('Please sign in to save routes to cloud');
     return;
   }
 
+  // This method now handles saved route selection only
   const app = window.AccessNatureApp;
   const state = app?.getController('state');
+  const savedSessions = state?.getSessions();
   
-  // Check for current route data first
-  let routeDataToSave = state?.getRouteData();
-  let routeInfo = null;
-  
-  if (!routeDataToSave || routeDataToSave.length === 0) {
-    // No current route data, let user choose from saved routes
-    const savedSessions = state?.getSessions();
-    
-    if (!savedSessions || savedSessions.length === 0) {
-      alert('❌ No route data available to save to cloud.\n\nTo save routes to cloud:\n• Start tracking and record a route, OR\n• Save a route locally first, then upload it to cloud');
-      return;
-    }
-    
-    // Let user select from saved routes
-    const selectedRoute = this.selectRouteForCloudSave(savedSessions);
-    if (!selectedRoute) return;
-    
-    routeDataToSave = selectedRoute.data;
-    routeInfo = selectedRoute;
-  } else {
-    // Use current route data
-    routeInfo = {
-      name: prompt('Enter a name for this route:') || `Route ${new Date().toLocaleDateString()}`,
-      totalDistance: state?.getTotalDistance() || 0,
-      elapsedTime: state?.getElapsedTime() || 0,
-      date: new Date().toISOString()
-    };
-  }
-
-  if (!routeDataToSave || routeDataToSave.length === 0) {
-    alert('❌ No valid route data to save to cloud');
+  if (!savedSessions || savedSessions.length === 0) {
+    alert('❌ No saved routes available to upload to cloud.\n\n💡 To save routes to cloud:\n• Start tracking and record a route\n• The route will be automatically saved to cloud after local save');
     return;
   }
-
+  
+  // Let user select from saved routes
+  const selectedRoute = this.selectRouteForCloudSave(savedSessions);
+  if (!selectedRoute) return;
+  
   try {
-    this.showCloudSyncIndicator('Saving route to cloud...');
+    this.showCloudSyncIndicator('Uploading saved route to cloud...');
     
-    // Get accessibility data if available
-    let accessibilityData = null;
-    try {
-      const storedAccessibilityData = localStorage.getItem('accessibilityData');
-      accessibilityData = storedAccessibilityData ? JSON.parse(storedAccessibilityData) : null;
-    } catch (error) {
-      console.warn('Could not load accessibility data:', error);
+    // Use the tracking controller's cloud save method
+    const trackingController = app?.getController('tracking');
+    if (trackingController && typeof trackingController.saveRouteToCloud === 'function') {
+      await trackingController.saveRouteToCloud(
+        selectedRoute.data,
+        selectedRoute,
+        null, // No accessibility data for old routes
+        this
+      );
+    } else {
+      throw new Error('Tracking controller not available');
     }
-
-    // Prepare route document for Firestore
-    const routeDoc = {
-      userId: this.currentUser.uid,
-      userEmail: this.currentUser.email,
-      routeName: routeInfo.name,
-      createdAt: new Date().toISOString(),
-      uploadedAt: new Date().toISOString(),
-      
-      // Route statistics
-      totalDistance: routeInfo.totalDistance || 0,
-      elapsedTime: routeInfo.elapsedTime || 0,
-      originalDate: routeInfo.date,
-      
-      // Route data
-      routeData: routeDataToSave,
-      
-      // Statistics for quick access
-      stats: {
-        locationPoints: routeDataToSave.filter(p => p.type === 'location').length,
-        photos: routeDataToSave.filter(p => p.type === 'photo').length,
-        notes: routeDataToSave.filter(p => p.type === 'text').length,
-        totalDataPoints: routeDataToSave.length
-      },
-      
-      // Accessibility information
-      accessibilityData: accessibilityData,
-      
-      // Technical info
-      deviceInfo: {
-        userAgent: navigator.userAgent,
-        timestamp: Date.now(),
-        appVersion: '1.0'
-      }
-    };
-
-    // Import Firestore functions and save
-    const { collection, addDoc } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
-    
-    const docRef = await addDoc(collection(db, 'routes'), routeDoc);
-    
-    this.showSuccessMessage(`✅ "${routeInfo.name}" saved to cloud successfully! ☁️`);
-    console.log('✅ Route saved to cloud with ID:', docRef.id);
-    
-    // Update user stats (optional)
-    this.updateUserStats();
     
   } catch (error) {
-    console.error('❌ Failed to save route to cloud:', error);
-    
-    // More specific error messages
-    if (error.code === 'permission-denied') {
-      this.showAuthError('Permission denied. Please check your Firestore security rules.');
-    } else if (error.code === 'quota-exceeded') {
-      this.showAuthError('Storage quota exceeded. Please contact support.');
-    } else {
-      this.showAuthError('Failed to save route to cloud: ' + error.message);
-    }
+    console.error('❌ Failed to upload saved route:', error);
+    this.showAuthError('Failed to upload route: ' + error.message);
   }
 }
 
