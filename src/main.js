@@ -89,18 +89,30 @@ async handleUnsavedRoute() {
 }
 
 // NEW: Show enhanced restore dialog
+// FIXED: Show enhanced restore dialog
 async showRestoreDialog(backupData) {
   return new Promise((resolve) => {
     try {
-      const backupDate = new Date(backupData.backupTime).toLocaleString();
-      const pointCount = backupData.routeData.length;
+      // Validate backupData structure
+      if (!backupData || typeof backupData !== 'object') {
+        console.error('❌ Invalid backup data structure');
+        resolve(false);
+        return;
+      }
+
+      const backupDate = new Date(backupData.backupTime || Date.now()).toLocaleString();
+      const routeData = backupData.routeData || [];
+      const pointCount = routeData.length;
       const distance = (backupData.totalDistance || 0).toFixed(2);
-      const locationPoints = backupData.routeData.filter(p => p.type === 'location').length;
-      const photos = backupData.routeData.filter(p => p.type === 'photo').length;
-      const notes = backupData.routeData.filter(p => p.type === 'text').length;
+      
+      // Safely filter route data
+      const locationPoints = routeData.filter(p => p && p.type === 'location').length;
+      const photos = routeData.filter(p => p && p.type === 'photo').length;
+      const notes = routeData.filter(p => p && p.type === 'text').length;
       
       // Calculate time since backup
-      const backupAge = Date.now() - backupData.backupTime;
+      const backupTime = backupData.backupTime || Date.now();
+      const backupAge = Date.now() - backupTime;
       const hoursAgo = Math.floor(backupAge / (1000 * 60 * 60));
       const minutesAgo = Math.floor((backupAge % (1000 * 60 * 60)) / (1000 * 60));
       
@@ -139,8 +151,8 @@ Would you like to restore it?
         const success = this.controllers.state.restoreFromBackup(backupData);
         
         if (success) {
-          // Show success message with action options
-          this.showRestoreSuccessDialog(backupData);
+          // Show success message without action options to avoid conflicts
+          this.showRestoreSuccessMessage(backupData);
           resolve(true);
         } else {
           this.showError('❌ Failed to restore route. Starting fresh.');
@@ -171,7 +183,7 @@ This action cannot be undone!`);
           console.log('👤 User changed mind, attempting restore...');
           const success = this.controllers.state.restoreFromBackup(backupData);
           if (success) {
-            this.showRestoreSuccessDialog(backupData);
+            this.showRestoreSuccessMessage(backupData);
             resolve(true);
           } else {
             this.showError('❌ Failed to restore route.');
@@ -188,70 +200,73 @@ This action cannot be undone!`);
   });
 }
 
+// FIXED: Simple success message without action dialogs
+showRestoreSuccessMessage(backupData) {
+  const distance = (backupData.totalDistance || 0).toFixed(2);
+  const pointCount = (backupData.routeData || []).filter(p => p && p.type === 'location').length;
+  
+  this.showSuccessMessage(`✅ Route restored! ${distance} km and ${pointCount} GPS points recovered. Check the map and click ▶ to continue tracking.`);
+  
+  console.log(`✅ Route restored: ${distance} km, ${pointCount} GPS points`);
+  console.log('💡 User can now: 1) Resume tracking with ▶, 2) Save route, 3) View on map');
+}
+
 // NEW: Show restore success dialog with options
+// UPDATED: Show restore success dialog without auto-popup
 showRestoreSuccessDialog(backupData) {
   const distance = (backupData.totalDistance || 0).toFixed(2);
   const pointCount = backupData.routeData.filter(p => p.type === 'location').length;
   
-  const successMessage = `✅ Route restored successfully!
-
-📏 ${distance} km and ${pointCount} GPS points recovered
-
-What would you like to do next?
-
-🚀 CONTINUE = Resume tracking from where you left off
-💾 SAVE = Save this route now
-👁️ VIEW = View route on map
-
-Click OK to continue, or check the route on the map.`;
-
-  // Show success message
-  this.showSuccessMessage('✅ Route restored successfully!');
+  // Show success message only
+  this.showSuccessMessage('✅ Route restored successfully! Check route on map.');
   
-  // Give user options
-  setTimeout(() => {
-    const action = prompt(`Route restored! What next?\n\nType:\n• "continue" to resume tracking\n• "save" to save route now\n• "view" to view on map\n• or just click Cancel to review`);
-    
-    if (action) {
-      const actionLower = action.toLowerCase().trim();
-      
-      switch (actionLower) {
-        case 'continue':
-        case 'c':
-        case 'resume':
-          this.continueRestoredRoute();
-          break;
-        case 'save':
-        case 's':
-          this.saveRestoredRoute();
-          break;
-        case 'view':
-        case 'v':
-        case 'map':
-          this.viewRestoredRoute();
-          break;
-        default:
-          console.log('👤 User chose to review route manually');
-      }
-    }
-  }, 2000);
+  console.log(`✅ Route restored: ${distance} km, ${pointCount} GPS points`);
+  console.log('💡 User can now: 1) Resume tracking, 2) Save route, 3) View on map');
+  
+  // Don't show the options dialog automatically - let user decide
 }
 
-// NEW: Continue tracking from restored route
+// UPDATED: Continue tracking from restored route
 continueRestoredRoute() {
   try {
-    console.log('🚀 Continuing restored route...');
+    console.log('🚀 Preparing to continue restored route...');
     
-    // Update tracking state but don't auto-start
+    // Set up timer with restored elapsed time
+    const timerController = this.controllers.timer;
+    const elapsedTime = this.controllers.state.getElapsedTime();
+    
+    if (timerController && elapsedTime > 0) {
+      timerController.setElapsedTime(elapsedTime);
+      console.log(`⏱️ Timer prepared with ${this.formatElapsedTime(elapsedTime)} elapsed`);
+    }
+    
+    // Update tracking buttons but don't auto-start
     const trackingController = this.controllers.tracking;
     if (trackingController) {
-      // Don't automatically start tracking, just prepare the UI
       trackingController.updateTrackingButtons();
-      this.showSuccessMessage('🚀 Ready to continue tracking! Click ▶ to resume.');
     }
+    
+    this.showSuccessMessage('🚀 Ready to continue! Click ▶ to resume tracking.');
+    
   } catch (error) {
     console.error('❌ Failed to prepare continued tracking:', error);
     this.showError('❌ Failed to prepare tracking continuation.');
+  }
+}
+
+// NEW: Helper method to format elapsed time
+formatElapsedTime(milliseconds) {
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${seconds}s`;
+  } else if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  } else {
+    return `${seconds}s`;
   }
 }
 

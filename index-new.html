@@ -32,7 +32,82 @@
       </div>
     </div>
   </div>
+<!-- Add this anywhere in your landing page for debugging -->
+<div style="position: fixed; top: 80px; right: 20px; z-index: 9999; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px;">
+  <button onclick="debugTrailGuides()" style="background: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 5px; margin: 2px;">
+    🔍 Check Guides
+  </button>
+  <button onclick="makeGuidesPublic()" style="background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 5px; margin: 2px;">
+    🌍 Make Public
+  </button>
+</div>
 
+<script>
+// Add these global functions for easy debugging
+async function debugTrailGuides() {
+  try {
+    const { collection, getDocs, query, limit } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+    const { db } = await import("./firebase-setup.js");
+    
+    const guidesQuery = query(collection(db, 'trail_guides'), limit(20));
+    const snapshot = await getDocs(guidesQuery);
+    
+    console.log('📊 TOTAL GUIDES:', snapshot.size);
+    alert(`Found ${snapshot.size} trail guides total`);
+    
+    if (snapshot.size > 0) {
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        console.log('📄', data.routeName, '- Public:', data.isPublic, '- User:', data.userEmail);
+      });
+    }
+  } catch (error) {
+    console.error('❌ Debug failed:', error);
+    alert('Debug failed: ' + error.message);
+  }
+}
+
+async function makeGuidesPublic() {
+  try {
+    const { collection, getDocs, query, doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+    const { db, auth } = await import("./firebase-setup.js");
+    
+    if (!auth.currentUser) {
+      alert('Please sign in first!');
+      return;
+    }
+    
+    const guidesQuery = query(collection(db, 'trail_guides'));
+    const snapshot = await getDocs(guidesQuery);
+    
+    let updated = 0;
+    const promises = [];
+    
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      if (data.userId === auth.currentUser.uid && !data.isPublic) {
+        promises.push(updateDoc(doc(db, 'trail_guides', docSnap.id), {
+          isPublic: true,
+          publishedAt: new Date().toISOString()
+        }));
+        updated++;
+      }
+    });
+    
+    if (promises.length === 0) {
+      alert('No private guides found to make public!');
+      return;
+    }
+    
+    await Promise.all(promises);
+    alert(`✅ Made ${updated} guides public!`);
+    
+  } catch (error) {
+    console.error('❌ Failed:', error);
+    alert('Failed: ' + error.message);
+  }
+}
+</script>
   <!-- Main Navigation -->
   <div class="main-navigation">
     <div class="nav-container">

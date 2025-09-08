@@ -166,6 +166,7 @@
   <div id="bottomNav" class="bottom-nav">
     <button class="nav-button" onclick="togglePanel('exportPanel')">Export</button>
     <button class="nav-button" onclick="togglePanel('summaryPanel')">Routes</button>
+    <button class="nav-button" onclick="togglePanel('trailGuidePanel')">Guides</button>
     <button class="nav-button" onclick="togglePanel('devToolsPanel')">Tools</button>
   </div>
 
@@ -180,8 +181,10 @@
 
   <!-- Summary Panel -->
   <div id="summaryPanel" class="bottom-popup hidden">
-    <button id="clearAllSessionsBtn">🗑️ Clear Routes</button>
-    <button id="clearAllAppDataBtn">🧹 Clear Everything</button>
+    <button id="loadCloudRoutesBtn" class="cloud-load-btn">☁️ Load My Routes</button>
+  <button id="loadMyGuidesBtn" class="cloud-load-btn">🌐 Load My Guides</button>
+  <button id="clearAllSessionsBtn">🗑️ Clear Routes</button>
+  <button id="clearAllAppDataBtn">🧹 Clear Everything</button>
   </div>
 
   <!-- Dev Tools Panel -->
@@ -190,6 +193,15 @@
     <button onclick="triggerImport()">📥 Import Route</button>
     <button id="resetBtn" onclick="confirmAndResetApp()">🔄 Reset App</button>
   </div>
+
+  <!-- Add this new panel after your existing panels -->
+<!-- <div id="trailGuidePanel" class="bottom-popup hidden">
+  <h3>🌐 My Trail Guides</h3>
+  <button id="loadMyGuidesBtn">📂 Load My Guides</button>
+  <div id="myGuidesList" class="guides-list"> -->
+    <!-- Dynamically populated -->
+  <!-- </div>
+</div> -->
 
   <!-- Accessibility Form Modal -->
   <div id="accessibilityOverlay" class="overlay hidden">

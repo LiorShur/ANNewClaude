@@ -16,6 +16,11 @@ class LandingPageController {
       
       // Set up event listeners
       this.setupEventListeners();
+
+
+
+      // DEBUG: Check trail guides
+    await this.debugTrailGuides();
       
       // Load community stats
       await this.loadCommunityStats();
@@ -42,6 +47,7 @@ class LandingPageController {
           this.quickSearch();
         }
       });
+      window.viewTrailGuide = (guideId) => this.viewTrailGuide(guideId);
     }
 
     // Make functions global
@@ -676,6 +682,211 @@ Happy trail mapping! 🥾`);
       default: return [0, null];
     }
   }
+
+  // ADD this debug function to your LandingPageController class
+async debugTrailGuides() {
+  try {
+    console.log('🐛 Debugging trail guides...');
+    
+    const { collection, getDocs, query, limit } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+    
+    // Check ALL trail guides (public and private)
+    const allGuidesQuery = query(collection(db, 'trail_guides'), limit(10));
+    const allSnapshot = await getDocs(allGuidesQuery);
+    
+    console.log('📊 Total trail guides in database:', allSnapshot.size);
+    
+    if (allSnapshot.size > 0) {
+      allSnapshot.forEach(doc => {
+        const data = doc.data();
+        console.log('📄 Trail guide:', {
+          id: doc.id,
+          name: data.routeName,
+          isPublic: data.isPublic,
+          userId: data.userId,
+          generatedAt: data.generatedAt
+        });
+      });
+      
+      // Check specifically for public guides
+      const { where } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+      const publicQuery = query(
+        collection(db, 'trail_guides'), 
+        where('isPublic', '==', true),
+        limit(10)
+      );
+      const publicSnapshot = await getDocs(publicQuery);
+      console.log('🌍 Public trail guides:', publicSnapshot.size);
+      
+    } else {
+      console.log('❌ No trail guides found in database');
+    }
+    
+  } catch (error) {
+    console.error('🐛 Debug failed:', error);
+  }
+}
+
+// NEW: View trail guide directly (no auth controller dependency)
+async viewTrailGuide(guideId) {
+  try {
+    console.log('👁️ Viewing trail guide:', guideId);
+    
+    // Import Firestore functions
+    const { doc, getDoc, updateDoc, increment } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+    
+    // Get the trail guide document
+    const guideRef = doc(db, 'trail_guides', guideId);
+    const guideSnap = await getDoc(guideRef);
+    
+    if (!guideSnap.exists()) {
+      alert('❌ Trail guide not found');
+      return;
+    }
+    
+    const guideData = guideSnap.data();
+    
+    // Check if it's public or user owns it
+    const { auth } = await import('../firebase-setup.js');
+    const currentUser = auth.currentUser;
+    
+    const canView = guideData.isPublic || (currentUser && currentUser.uid === guideData.userId);
+    
+    if (!canView) {
+      alert('❌ This trail guide is private and you don\'t have permission to view it.');
+      return;
+    }
+    
+    // Increment view count (only for public guides and if not the owner)
+    if (guideData.isPublic && (!currentUser || currentUser.uid !== guideData.userId)) {
+      try {
+        await updateDoc(guideRef, {
+          'community.views': increment(1)
+        });
+        console.log('📈 View count incremented');
+      } catch (error) {
+        console.warn('Failed to increment view count:', error);
+        // Don't fail the whole operation for this
+      }
+    }
+    
+    // Show the HTML content
+    if (guideData.htmlContent) {
+      this.displayTrailGuideHTML(guideData.htmlContent, guideData.routeName);
+    } else {
+      alert('❌ Trail guide content not available');
+    }
+    
+  } catch (error) {
+    console.error('❌ Failed to view trail guide:', error);
+    alert('❌ Failed to load trail guide: ' + error.message);
+  }
+}
+
+// NEW: Display trail guide HTML in new window
+displayTrailGuideHTML(htmlContent, routeName) {
+  try {
+    // Create blob and open in new tab
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
+    // Open in new window/tab
+    const newWindow = window.open(url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+    
+    if (!newWindow) {
+      // Popup blocked, offer download instead
+      const downloadConfirm = confirm('Popup blocked! Would you like to download the trail guide instead?');
+      if (downloadConfirm) {
+        this.downloadTrailGuide(htmlContent, routeName);
+      }
+    } else {
+      // Set window title
+      newWindow.document.title = `${routeName} - Trail Guide`;
+    }
+    
+    // Clean up URL after delay
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    
+  } catch (error) {
+    console.error('❌ Failed to display trail guide:', error);
+    alert('❌ Failed to display trail guide: ' + error.message);
+  }
+}
+
+// NEW: Download trail guide as HTML file
+downloadTrailGuide(htmlContent, routeName) {
+  try {
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${routeName.replace(/[^a-z0-9]/gi, '_')}_trail_guide.html`;
+    a.style.display = 'none';
+    
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+    
+    console.log('✅ Trail guide downloaded');
+    
+  } catch (error) {
+    console.error('❌ Failed to download trail guide:', error);
+    alert('❌ Failed to download trail guide: ' + error.message);
+  }
+}
+
+// UPDATED: Check authentication status for landing page
+async checkLandingAuth() {
+  try {
+    const { auth } = await import('../firebase-setup.js');
+    return {
+      isSignedIn: !!auth.currentUser,
+      user: auth.currentUser,
+      email: auth.currentUser?.email
+    };
+  } catch (error) {
+    console.error('Auth check failed:', error);
+    return { isSignedIn: false, user: null, email: null };
+  }
+}
+
+// ADD this method to LandingPageController
+async updateLandingAuthStatus() {
+  const authStatus = await this.checkLandingAuth();
+  
+  const userInfo = document.getElementById('userInfo');
+  const authPrompt = document.getElementById('authPrompt');
+  const userEmail = document.getElementById('userEmail');
+  
+  if (authStatus.isSignedIn) {
+    userInfo?.classList.remove('hidden');
+    authPrompt?.classList.add('hidden');
+    if (userEmail) userEmail.textContent = authStatus.email;
+  } else {
+    userInfo?.classList.add('hidden');
+    authPrompt?.classList.remove('hidden');
+  }
+}
+
+// Call this in your initialize() method
+async initialize() {
+  try {
+    console.log('🏠 Initializing landing page...');
+    
+    this.setupEventListeners();
+    await this.updateLandingAuthStatus(); // Add this line
+    await this.loadCommunityStats();
+    await this.loadFeaturedTrails();
+    this.updateUserStats();
+    
+    console.log('✅ Landing page initialized');
+  } catch (error) {
+    console.error('❌ Landing page initialization failed:', error);
+  }
+}
 }
 
 // Initialize landing page when DOM is ready

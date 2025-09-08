@@ -33,16 +33,39 @@ export class NavigationController {
     }
   }
 
-  showStorageMonitor() {
-    const storageInfo = this.getStorageInfo();
-    const message = `Storage Usage:
-- Total: ${storageInfo.totalSizeKB} KB
-- Photos: ${storageInfo.photoCount} (${storageInfo.photoSizeKB} KB)
-- Usage: ${storageInfo.usagePercent}%
-${storageInfo.isNearLimit ? '⚠️ Storage nearly full!' : ''}`;
+  async showStorageMonitor() {
+  try {
+    const app = window.AccessNatureApp;
+    const storageInfo = await app?.getController('state')?.getStorageInfo();
+    
+    if (!storageInfo) {
+      alert('❌ Could not retrieve storage information');
+      return;
+    }
+
+    const message = `💾 Storage Information:
+
+🗄️ Storage Type: ${storageInfo.storageType}
+📊 Usage: ${storageInfo.usageFormatted} / ${storageInfo.quotaFormatted}
+📈 Used: ${storageInfo.usagePercent}%
+${storageInfo.indexedDBSupported ? '✅ Large Storage Available' : '⚠️ Limited Storage (localStorage)'}
+${storageInfo.migrationCompleted ? '✅ Migration Completed' : '🔄 Migration Pending'}
+
+💡 Benefits of IndexedDB:
+- Much larger storage capacity (GBs vs MBs)
+- Better performance for route data
+- Supports photos and large files
+- Offline-first design
+
+${storageInfo.usagePercent > 80 ? '⚠️ Storage nearly full! Consider exporting old routes.' : ''}`;
     
     alert(message);
+    
+  } catch (error) {
+    console.error('❌ Failed to show storage monitor:', error);
+    alert('❌ Failed to retrieve storage information');
   }
+}
 
   getStorageInfo() {
     let totalSize = 0;
@@ -128,4 +151,100 @@ ${storageInfo.isNearLimit ? '⚠️ Storage nearly full!' : ''}`;
     delete window.clearAllSessions;
     delete window.clearAllAppData;
   }
+
+  // Enhanced route management
+async showRouteManager() {
+  try {
+    const app = window.AccessNatureApp;
+    const state = app?.getController('state');
+    const routes = await state?.getSessions();
+    
+    if (!routes || routes.length === 0) {
+      alert('📂 No saved routes found.\n\nStart tracking to create your first route!');
+      return;
+    }
+
+    let message = `📂 Route Manager (${routes.length} routes):\n\n`;
+    
+    routes.slice(0, 10).forEach((route, index) => {
+      const date = new Date(route.date).toLocaleDateString();
+      const size = route.dataSize ? ` (${this.formatBytes(route.dataSize)})` : '';
+      message += `${index + 1}. ${route.name}\n`;
+      message += `   📅 ${date} | 📏 ${route.totalDistance?.toFixed(2) || 0} km${size}\n\n`;
+    });
+
+    if (routes.length > 10) {
+      message += `... and ${routes.length - 10} more routes\n\n`;
+    }
+
+    message += `Actions:\n`;
+    message += `• Enter number (1-${Math.min(routes.length, 10)}) to manage specific route\n`;
+    message += `• Type "all" to see all routes\n`;
+    message += `• Type "export" to export all routes\n`;
+    message += `• Cancel to close`;
+
+    const choice = prompt(message);
+    
+    if (!choice) return;
+    
+    if (choice.toLowerCase() === 'all') {
+      this.showAllRoutes(routes);
+    } else if (choice.toLowerCase() === 'export') {
+      this.exportAllRoutes(routes);
+    } else {
+      const index = parseInt(choice) - 1;
+      if (index >= 0 && index < Math.min(routes.length, 10)) {
+        this.manageRoute(routes[index]);
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ Failed to show route manager:', error);
+    alert('❌ Failed to load routes');
+  }
+}
+
+manageRoute(route) {
+  const date = new Date(route.date).toLocaleDateString();
+  const actions = `🗂️ Manage "${route.name}":
+
+📅 Created: ${date}
+📏 Distance: ${route.totalDistance?.toFixed(2) || 0} km
+📊 Data Points: ${route.data?.length || 0}
+${route.dataSize ? `💾 Size: ${this.formatBytes(route.dataSize)}` : ''}
+
+Actions:
+1. 👁️ View on map
+2. 📤 Export route
+3. 📋 Copy details
+4. 🗑️ Delete route
+5. ❌ Cancel
+
+Enter choice (1-5):`;
+
+  const choice = prompt(actions);
+  
+  switch (choice) {
+    case '1':
+      this.viewRouteOnMap(route);
+      break;
+    case '2':
+      this.exportSingleRoute(route);
+      break;
+    case '3':
+      this.copyRouteDetails(route);
+      break;
+    case '4':
+      this.deleteRoute(route);
+      break;
+  }
+}
+
+formatBytes(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
 }
