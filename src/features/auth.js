@@ -23,80 +23,129 @@ export class AuthController {
   }
 
   async initialize() {
-    if (this.isInitialized) return;
+  if (this.isInitialized) return;
 
-    try {
-      this.setupEventListeners();
-      this.setupAuthStateListener();
-      this.adjustLayoutForAuth();
-      
-      this.isInitialized = true;
-      console.log('🔥 Auth controller initialized');
-      
-    } catch (error) {
-      console.error('❌ Auth initialization failed:', error);
-    }
+  try {
+    console.log('🔥 Auth controller starting...');
+    
+    this.setupEventListeners();
+    this.setupAuthStateListener();
+    this.adjustLayoutForAuth();
+    
+    // Force setup buttons
+    this.forceSetupButtons();
+    
+    this.isInitialized = true;
+    console.log('🔥 Auth controller initialized');
+    
+  } catch (error) {
+    console.error('❌ Auth initialization failed:', error);
   }
-
-  setupEventListeners() {
-    // Show auth modal button
-    const showAuthBtn = document.getElementById('showAuthBtn');
-    if (showAuthBtn) {
-      showAuthBtn.addEventListener('click', () => this.showAuthModal());
-    }
-
-    // Login form
-    const loginForm = document.querySelector('#loginForm form');
-    if (loginForm) {
-      loginForm.addEventListener('submit', (e) => this.handleLogin(e));
-    }
-
-    // Signup form
-    const signupForm = document.querySelector('#signupForm form');
-    if (signupForm) {
-      signupForm.addEventListener('submit', (e) => this.handleSignup(e));
-    }
-
-    // Google login buttons
-    const googleLoginBtn = document.getElementById('googleLoginBtn');
-    const googleSignupBtn = document.getElementById('googleSignupBtn');
-    if (googleLoginBtn) {
-      googleLoginBtn.addEventListener('click', () => this.handleGoogleAuth());
-    }
-    if (googleSignupBtn) {
-      googleSignupBtn.addEventListener('click', () => this.handleGoogleAuth());
-    }
-
-    // Logout button
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', () => this.handleLogout());
-    }
-
-    // Cloud save/load buttons
-// Cloud save/load buttons
-const saveToCloudBtn = document.getElementById('saveToCloudBtn');
-const loadCloudRoutesBtn = document.getElementById('loadCloudRoutesBtn');
-
-if (saveToCloudBtn) {
-  saveToCloudBtn.addEventListener('click', () => {
-    console.log('☁️ Cloud save button clicked');
-    this.saveCurrentRouteToCloud();
-  });
-}
-if (loadCloudRoutesBtn) {
-  loadCloudRoutesBtn.addEventListener('click', () => {
-    console.log('📂 Load cloud routes button clicked');
-    this.loadUserRoutes();
-  });
 }
 
-    // Make global functions available
-    window.showAuthModal = () => this.showAuthModal();
-    window.closeAuthModal = () => this.closeAuthModal();
-    window.switchToLogin = () => this.switchToLogin();
-    window.switchToSignup = () => this.switchToSignup();
+setupEventListeners() {
+  console.log('🔧 Setting up auth event listeners...');
+  
+  // Show auth modal button
+  const showAuthBtn = document.getElementById('showAuthBtn');
+  if (showAuthBtn) {
+    showAuthBtn.addEventListener('click', () => this.showAuthModal());
   }
+
+  // Login form
+  const loginForm = document.querySelector('#loginForm form');
+  if (loginForm) {
+    loginForm.addEventListener('submit', (e) => this.handleLogin(e));
+  }
+
+  // Signup form
+  const signupForm = document.querySelector('#signupForm form');
+  if (signupForm) {
+    signupForm.addEventListener('submit', (e) => this.handleSignup(e));
+  }
+
+  // Google login buttons
+  const googleLoginBtn = document.getElementById('googleLoginBtn');
+  const googleSignupBtn = document.getElementById('googleSignupBtn');
+  if (googleLoginBtn) {
+    googleLoginBtn.addEventListener('click', () => this.handleGoogleAuth());
+  }
+  if (googleSignupBtn) {
+    googleSignupBtn.addEventListener('click', () => this.handleGoogleAuth());
+  }
+
+  // Logout button
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => this.handleLogout());
+  }
+
+  // Cloud buttons - set up immediately and with retry
+  this.setupCloudButtonsWithRetry();
+
+  // Make global functions available
+  window.showAuthModal = () => this.showAuthModal();
+  window.closeAuthModal = () => this.closeAuthModal();
+  window.switchToLogin = () => this.switchToLogin();
+  window.switchToSignup = () => this.switchToSignup();
+  
+  console.log('✅ Auth event listeners setup complete');
+}
+
+// NEW: Setup cloud buttons with retry mechanism
+setupCloudButtonsWithRetry() {
+  const setupAttempt = (attempt = 1) => {
+    console.log(`🔧 Setting up cloud buttons (attempt ${attempt})...`);
+    
+    const buttons = [
+      { id: 'saveToCloudBtn', handler: () => this.saveCurrentRouteToCloud(), label: 'Save to Cloud' },
+      { id: 'loadCloudRoutesBtn', handler: () => this.loadUserRoutes(), label: 'Load Cloud Routes' },
+      { id: 'loadMyGuidesBtn', handler: () => this.loadMyTrailGuides(), label: 'Load My Guides' }
+    ];
+
+    let successCount = 0;
+    
+    buttons.forEach(({ id, handler, label }) => {
+      const button = document.getElementById(id);
+      if (button) {
+        // Check if already has event listener
+        const hasListener = button.onclick || Object.keys(getEventListeners(button)).length > 0;
+        
+        if (!hasListener) {
+          button.addEventListener('click', (e) => {
+            console.log(`📱 ${label} clicked`);
+            e.preventDefault();
+            e.stopPropagation();
+            handler();
+          });
+          
+          console.log(`✅ ${label} button setup complete`);
+          successCount++;
+        } else {
+          console.log(`ℹ️ ${label} button already has event listener`);
+          successCount++;
+        }
+      } else {
+        console.warn(`⚠️ ${label} button not found (${id})`);
+      }
+    });
+    
+    // If not all buttons were found, retry up to 3 times
+    if (successCount < buttons.length && attempt < 3) {
+      console.log(`🔄 Only ${successCount}/${buttons.length} buttons found, retrying...`);
+      setTimeout(() => setupAttempt(attempt + 1), 1000);
+    } else {
+      console.log(`🎯 Cloud buttons setup complete: ${successCount}/${buttons.length} buttons found`);
+    }
+  };
+  
+  // Start setup immediately
+  setupAttempt();
+  
+  // Also setup with delay in case DOM isn't ready
+  setTimeout(() => setupAttempt(), 1000);
+  setTimeout(() => setupAttempt(), 3000);
+}
 
   setupAuthStateListener() {
     onAuthStateChanged(auth, (user) => {
@@ -1453,6 +1502,475 @@ async updateTrailGuide(originalGuideId, routeData, routeInfo, accessibilityData)
   } catch (error) {
     console.error('❌ Failed to update trail guide:', error);
     throw error;
+  }
+}
+
+// ADD this to your auth.js for testing
+async makeAllMyGuidesPublic() {
+  if (!this.currentUser) {
+    console.log('Not logged in');
+    return;
+  }
+  
+  try {
+    const { collection, query, where, getDocs, doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+    
+    // Get user's private guides
+    const myGuidesQuery = query(
+      collection(db, 'trail_guides'),
+      where('userId', '==', this.currentUser.uid),
+      where('isPublic', '==', false)
+    );
+    
+    const snapshot = await getDocs(myGuidesQuery);
+    console.log(`Found ${snapshot.size} private guides to make public`);
+    
+    // Make them public
+    const updatePromises = [];
+    snapshot.forEach(docSnap => {
+      const guideRef = doc(db, 'trail_guides', docSnap.id);
+      updatePromises.push(updateDoc(guideRef, {
+        isPublic: true,
+        publishedAt: new Date().toISOString()
+      }));
+    });
+    
+    await Promise.all(updatePromises);
+    console.log('✅ Made all guides public');
+    
+  } catch (error) {
+    console.error('❌ Failed to make guides public:', error);
+  }
+}
+
+// UPDATED: Load and display user's trail guides with better error handling
+async loadMyTrailGuides() {
+  if (!this.currentUser) {
+    this.showAuthError('Please sign in to view your trail guides');
+    return;
+  }
+
+  try {
+    console.log('📂 Loading user trail guides...');
+    this.showCloudSyncIndicator('Loading your trail guides...');
+    
+    // Import Firestore functions with timeout
+    const { collection, query, where, orderBy, getDocs } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+    
+    // Create query with error handling
+    let guidesQuery;
+    try {
+      guidesQuery = query(
+        collection(db, 'trail_guides'),
+        where('userId', '==', this.currentUser.uid),
+        orderBy('generatedAt', 'desc')
+      );
+    } catch (indexError) {
+      console.warn('Index not available, using simple query:', indexError);
+      // Fallback to simple query without orderBy
+      guidesQuery = query(
+        collection(db, 'trail_guides'),
+        where('userId', '==', this.currentUser.uid)
+      );
+    }
+
+    console.log('📤 Executing Firestore query...');
+    
+    // Add timeout to the query
+    const queryPromise = getDocs(guidesQuery);
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Query timeout')), 10000)
+    );
+    
+    const querySnapshot = await Promise.race([queryPromise, timeoutPromise]);
+    
+    console.log('📥 Query completed, processing results...');
+    
+    const guides = [];
+    querySnapshot.forEach(doc => {
+      guides.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
+    // Sort client-side if we used simple query (no orderBy)
+    guides.sort((a, b) => new Date(b.generatedAt) - new Date(a.generatedAt));
+    
+    console.log(`✅ Found ${guides.length} user trail guides`);
+    
+    if (guides.length === 0) {
+      alert('📂 No trail guides found.\n\n💡 To create trail guides:\n• Record a route with GPS tracking\n• Save it to cloud\n• Trail guide will be auto-generated');
+      return;
+    }
+    
+    this.displayMyGuides(guides);
+    this.showSuccessMessage(`📂 Loaded ${guides.length} trail guide${guides.length !== 1 ? 's' : ''}!`);
+    
+  } catch (error) {
+    console.error('❌ Failed to load trail guides:', error);
+    
+    // Handle specific error types
+    if (error.message === 'Query timeout') {
+      this.showAuthError('Request timed out. Please check your internet connection and try again.');
+    } else if (error.code === 'permission-denied') {
+      this.showAuthError('Permission denied. Please check your Firestore security rules.');
+    } else if (error.code === 'unavailable') {
+      this.showAuthError('Firestore service temporarily unavailable. Please try again in a moment.');
+    } else {
+      this.showAuthError('Failed to load trail guides: ' + error.message);
+    }
+  } finally {
+    // Hide loading indicator
+    setTimeout(() => {
+      const indicator = document.getElementById('cloudSyncIndicator');
+      if (indicator) {
+        indicator.classList.add('hidden');
+      }
+    }, 1000);
+  }
+}
+
+// Manage individual guide
+manageGuide(guide) {
+  const actions = `🌐 Manage "${guide.routeName}":
+
+1. 👁️ View Trail Guide
+2. ${guide.isPublic ? '🔒 Make Private' : '🌍 Make Public'}
+3. 🗑️ Delete Guide
+4. ❌ Cancel
+
+Enter your choice (1-4):`;
+
+  const choice = prompt(actions);
+  
+  switch (choice) {
+    case '1':
+      this.viewTrailGuide(guide.id);
+      break;
+    case '2':
+      this.toggleTrailGuideVisibility(guide.id, !guide.isPublic);
+      break;
+    case '3':
+      this.deleteTrailGuide(guide.id);
+      break;
+    default:
+      // Cancel or invalid choice
+      break;
+  }
+}
+
+// NEW: Display user's guides in the panel
+displayMyGuides(guides) {
+  let message = '🌐 Your Trail Guides:\n\n';
+  
+  guides.forEach((guide, index) => {
+    const date = new Date(guide.generatedAt).toLocaleDateString();
+    const stats = guide.metadata || {};
+    const visibility = guide.isPublic ? '🌍 Public' : '🔒 Private';
+    
+    message += `${index + 1}. ${guide.routeName} ${visibility}\n`;
+    message += `   📅 ${date} | 📏 ${(stats.totalDistance || 0).toFixed(1)} km\n`;
+    message += `   📍 ${stats.locationCount || 0} GPS | 📷 ${stats.photoCount || 0} photos\n`;
+    if (guide.community?.views) {
+      message += `   👁️ ${guide.community.views} views\n`;
+    }
+    message += '\n';
+  });
+
+  message += `Select a guide to manage (1-${guides.length}), or 0 to cancel:`;
+  
+  const choice = prompt(message);
+  const choiceNum = parseInt(choice);
+  
+  if (choiceNum >= 1 && choiceNum <= guides.length) {
+    this.manageGuide(guides[choiceNum - 1]);
+  }
+}
+
+// NEW: Create HTML for a guide item
+createGuideItem(guide) {
+  const date = new Date(guide.generatedAt).toLocaleDateString();
+  const stats = guide.metadata || {};
+  
+  return `
+    <div class="guide-item">
+      <div class="guide-header">
+        <div class="guide-name">${guide.routeName}</div>
+        <div class="guide-visibility ${guide.isPublic ? 'guide-public' : 'guide-private'}">
+          ${guide.isPublic ? '🌍 Public' : '🔒 Private'}
+        </div>
+      </div>
+      
+      <div class="guide-meta">
+        📅 ${date} | 📏 ${(stats.totalDistance || 0).toFixed(1)} km | 
+        📍 ${stats.locationCount || 0} GPS | 📷 ${stats.photoCount || 0} photos
+        ${guide.community?.views ? `| 👁️ ${guide.community.views} views` : ''}
+      </div>
+      
+      <div class="guide-actions">
+        <button class="guide-btn guide-btn-view" onclick="viewMyTrailGuide('${guide.id}')">
+          👁️ View
+        </button>
+        <button class="guide-btn guide-btn-toggle" onclick="toggleGuideVisibility('${guide.id}', ${!guide.isPublic})">
+          ${guide.isPublic ? '🔒 Make Private' : '🌍 Make Public'}
+        </button>
+        <button class="guide-btn guide-btn-delete" onclick="deleteTrailGuide('${guide.id}')">
+          🗑️ Delete
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+// UPDATED: Toggle guide visibility with confirmation
+async toggleTrailGuideVisibility(guideId, makePublic) {
+  const action = makePublic ? 'publish' : 'make private';
+  const warning = makePublic 
+    ? 'This will make your trail guide visible to everyone in the community search.' 
+    : 'This will hide your trail guide from public search.';
+    
+  const confirmed = confirm(`${warning}\n\nAre you sure you want to ${action} this trail guide?`);
+  
+  if (!confirmed) return;
+
+  try {
+    const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+    
+    const updateData = {
+      isPublic: makePublic,
+      lastModified: new Date().toISOString()
+    };
+    
+    if (makePublic) {
+      updateData.publishedAt = new Date().toISOString();
+    }
+    
+    await updateDoc(doc(db, 'trail_guides', guideId), updateData);
+    
+    this.showSuccessMessage(`✅ Trail guide ${makePublic ? 'published' : 'made private'}!`);
+    
+    // Reload the guides list
+    this.loadMyTrailGuides();
+    
+  } catch (error) {
+    console.error('❌ Failed to update trail guide visibility:', error);
+    this.showAuthError('Failed to update guide visibility: ' + error.message);
+  }
+}
+
+// NEW: Delete trail guide
+// Delete trail guide
+async deleteTrailGuide(guideId) {
+  const confirmed = confirm('⚠️ Are you sure you want to permanently delete this trail guide?\n\nThis action cannot be undone!');
+  
+  if (!confirmed) return;
+
+  try {
+    const { doc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+    
+    await deleteDoc(doc(db, 'trail_guides', guideId));
+    
+    this.showSuccessMessage('✅ Trail guide deleted!');
+    
+  } catch (error) {
+    console.error('❌ Failed to delete trail guide:', error);
+    this.showAuthError('Failed to delete guide: ' + error.message);
+  }
+}
+
+// SIMPLE: Quick test method for loading guides
+async testLoadGuides() {
+  if (!this.currentUser) {
+    alert('Please sign in first');
+    return;
+  }
+
+  try {
+    console.log('🧪 Testing guide loading...');
+    alert('Loading guides... check console for progress');
+    
+    const { collection, query, where, getDocs } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+    
+    // Simple query without orderBy to avoid index issues
+    const guidesQuery = query(
+      collection(db, 'trail_guides'),
+      where('userId', '==', this.currentUser.uid)
+    );
+    
+    const querySnapshot = await getDocs(guidesQuery);
+    const guides = [];
+    
+    querySnapshot.forEach(doc => {
+      const data = doc.data();
+      guides.push({
+        id: doc.id,
+        name: data.routeName,
+        isPublic: data.isPublic,
+        created: data.generatedAt
+      });
+    });
+    
+    console.log('✅ Found guides:', guides);
+    
+    if (guides.length === 0) {
+      alert('No trail guides found for your account.');
+    } else {
+      const guidesList = guides.map(g => `• ${g.name} (${g.isPublic ? 'Public' : 'Private'})`).join('\n');
+      alert(`Found ${guides.length} trail guides:\n\n${guidesList}`);
+    }
+    
+  } catch (error) {
+    console.error('❌ Test failed:', error);
+    alert('Test failed: ' + error.message);
+  }
+}
+
+// NEW: View trail guide method for AuthController
+async viewTrailGuide(guideId) {
+  try {
+    console.log('👁️ Viewing trail guide:', guideId);
+    
+    // Import Firestore functions
+    const { doc, getDoc, updateDoc, increment } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+    
+    // Get the trail guide document
+    const guideRef = doc(db, 'trail_guides', guideId);
+    const guideSnap = await getDoc(guideRef);
+    
+    if (!guideSnap.exists()) {
+      alert('❌ Trail guide not found');
+      return;
+    }
+    
+    const guideData = guideSnap.data();
+    
+    // Check if user can view this guide
+    const canView = guideData.isPublic || (this.currentUser && this.currentUser.uid === guideData.userId);
+    
+    if (!canView) {
+      alert('❌ This trail guide is private and you don\'t have permission to view it.');
+      return;
+    }
+    
+    // Increment view count (only for public guides and if not the owner)
+    if (guideData.isPublic && (!this.currentUser || this.currentUser.uid !== guideData.userId)) {
+      try {
+        await updateDoc(guideRef, {
+          'community.views': increment(1)
+        });
+        console.log('📈 View count incremented');
+      } catch (error) {
+        console.warn('Failed to increment view count:', error);
+      }
+    }
+    
+    // Show the HTML content
+    if (guideData.htmlContent) {
+      this.displayTrailGuideHTML(guideData.htmlContent, guideData.routeName);
+    } else {
+      alert('❌ Trail guide content not available');
+    }
+    
+  } catch (error) {
+    console.error('❌ Failed to view trail guide:', error);
+    alert('❌ Failed to load trail guide: ' + error.message);
+  }
+}
+
+// NEW: Display trail guide HTML
+displayTrailGuideHTML(htmlContent, routeName) {
+  try {
+    // Create blob and open in new tab
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
+    // Open in new window/tab
+    const newWindow = window.open(url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+    
+    if (!newWindow) {
+      // Popup blocked, offer download instead
+      const downloadConfirm = confirm('Popup blocked! Would you like to download the trail guide instead?');
+      if (downloadConfirm) {
+        this.downloadTrailGuide(htmlContent, routeName);
+      }
+    } else {
+      // Set window title
+      newWindow.document.title = `${routeName} - Trail Guide`;
+    }
+    
+    // Clean up URL after delay
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    
+  } catch (error) {
+    console.error('❌ Failed to display trail guide:', error);
+    alert('❌ Failed to display trail guide: ' + error.message);
+  }
+}
+
+// NEW: Download trail guide as HTML file
+downloadTrailGuide(htmlContent, routeName) {
+  try {
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${routeName.replace(/[^a-z0-9]/gi, '_')}_trail_guide.html`;
+    a.style.display = 'none';
+    
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+    
+    console.log('✅ Trail guide downloaded');
+    
+  } catch (error) {
+    console.error('❌ Failed to download trail guide:', error);
+    alert('❌ Failed to download trail guide: ' + error.message);
+  }
+}
+
+// NEW: Force setup buttons immediately
+forceSetupButtons() {
+  console.log('🔨 Force setting up buttons...');
+  
+  // Use setTimeout to ensure DOM is ready
+  const setupButtons = () => {
+    const loadMyGuidesBtn = document.getElementById('loadMyGuidesBtn');
+    
+    if (loadMyGuidesBtn) {
+      console.log('🔧 Found loadMyGuidesBtn, setting up...');
+      
+      // Remove all existing listeners
+      const newBtn = loadMyGuidesBtn.cloneNode(true);
+      loadMyGuidesBtn.parentNode.replaceChild(newBtn, loadMyGuidesBtn);
+      
+      // Add our listener
+      newBtn.addEventListener('click', (e) => {
+        console.log('🌐 Load My Guides clicked (forced setup)');
+        e.preventDefault();
+        e.stopPropagation();
+        this.loadMyTrailGuides();
+      });
+      
+      console.log('✅ loadMyGuidesBtn setup complete');
+      return true;
+    } else {
+      console.warn('⚠️ loadMyGuidesBtn not found');
+      return false;
+    }
+  };
+  
+  // Try setup immediately
+  if (!setupButtons()) {
+    // If failed, retry with delays
+    setTimeout(setupButtons, 500);
+    setTimeout(setupButtons, 1000);
+    setTimeout(setupButtons, 2000);
+    setTimeout(setupButtons, 5000);
   }
 }
 }
