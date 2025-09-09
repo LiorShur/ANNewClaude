@@ -1058,27 +1058,40 @@ async updateUserStats() {
   }
 
   loadRouteData(route) {
-    const confirmed = confirm(`Load "${route.routeName}"? This will clear your current route data.`);
-    if (!confirmed) return;
+  const confirmed = confirm(`Load "${route.routeName}"? This will clear your current route data.`);
+  if (!confirmed) return;
 
-    const app = window.AccessNatureApp;
-    const state = app?.getController('state');
+  const app = window.AccessNatureApp;
+  const state = app?.getController('state');
+  const mapController = app?.getController('map');
+  
+  if (state) {
+    // Clear current route
+    state.clearRouteData();
     
-    if (state) {
-      state.clearRouteData();
-      
-      route.routeData.forEach(point => {
-        state.addRoutePoint(point);
-      });
-      
-      if (route.totalDistance) {
-        state.updateDistance(route.totalDistance);
-      }
-
-      this.showSuccessMessage('Route loaded successfully!');
-      console.log('✅ Route loaded:', route.routeName);
+    // Load route data
+    route.routeData.forEach(point => {
+      state.addRoutePoint(point);
+    });
+    
+    // Set distance and time
+    if (route.totalDistance) {
+      state.updateDistance(route.totalDistance);
     }
+    if (route.elapsedTime) {
+      state.setElapsedTime(route.elapsedTime);
+    }
+
+    // FIXED: Force map to show route
+    if (mapController) {
+      console.log('🗺️ Displaying cloud route on map...');
+      mapController.showRouteData(route.routeData);
+    }
+
+    this.showSuccessMessage('Route loaded successfully!');
+    console.log('✅ Route loaded:', route.routeName);
   }
+}
 
   // Event callback system
   onLogin(callback) {
