@@ -28,15 +28,19 @@ async start() {
   const isResuming = currentElapsed > 0 && this.appState.getRouteData().length > 0;
 
   if (!isResuming) {
-    // Starting fresh - clear any previous route data and set start time
-    this.appState.clearRouteData();
-    this.appState.setStartTime(Date.now());
-  } else {
-    // FIXED: Resuming - adjust start time to account for elapsed time
-    const adjustedStartTime = Date.now() - currentElapsed;
-    this.appState.setStartTime(adjustedStartTime);
-    console.log(`🔄 Resuming route with ${this.formatTime(currentElapsed)} elapsed`);
-  }
+  // Starting fresh - clear any previous route data and set start time
+  this.appState.clearRouteData();
+  this.appState.setStartTime(Date.now());
+} else {
+  // FIXED: Resuming - use more precise timing calculation
+  const currentTime = Date.now();
+  const adjustedStartTime = currentTime - currentElapsed;
+  this.appState.setStartTime(adjustedStartTime);
+  console.log(`🔄 Resuming route with ${this.formatTime(currentElapsed)} elapsed`);
+  
+  // IMPORTANT: Also update the app state's elapsed time to match
+  this.appState.setElapsedTime(currentElapsed);
+}
 
   this.isTracking = true;
   this.isPaused = false;
@@ -55,14 +59,15 @@ async start() {
 
   // FIXED: Start timer with current elapsed time (if resuming)
   if (this.dependencies.timer) {
-    if (isResuming) {
-      this.dependencies.timer.start(currentElapsed);
-      console.log(`⏱️ Timer resumed from ${this.formatTime(currentElapsed)}`);
-    } else {
-      this.dependencies.timer.start();
-      console.log('⏱️ Timer started fresh');
-    }
+  if (isResuming) {
+    // FIXED: Get the actual elapsed time from app state
+    const restoredElapsed = this.appState.getElapsedTime();
+    console.log(`⏱️ Starting timer with restored elapsed: ${restoredElapsed}ms`);
+    this.dependencies.timer.start(restoredElapsed);
+  } else {
+    this.dependencies.timer.start();
   }
+}
 
   this.updateTrackingButtons();
   

@@ -301,43 +301,54 @@ export class AppState {
     }
   }
 
-  // Enhanced auto-save with IndexedDB
   async autoSave() {
-    const backup = {
-      routeData: this.routeData,
-      pathPoints: this.pathPoints,
-      totalDistance: this.totalDistance,
-      elapsedTime: this.elapsedTime,
-      startTime: this.startTime,
-      isTracking: this.isTracking,
-      isPaused: this.isPaused,
-      backupTime: Date.now(),
-      deviceInfo: {
-        userAgent: navigator.userAgent,
-        url: window.location.href
-      }
-    };
-
-    try {
-      if (this.dbReady) {
-        await this.routeDB.saveBackup(backup);
-        console.log(`💾 Auto-backup to IndexedDB: ${this.routeData.length} points, ${this.totalDistance.toFixed(2)} km`);
-      } else {
-        localStorage.setItem('route_backup', JSON.stringify(backup));
-        console.log(`💾 Auto-backup to localStorage: ${this.routeData.length} points`);
-      }
-      this.lastBackupTime = Date.now();
-    } catch (error) {
-      console.warn('Auto-save failed:', error);
-      // Fallback to localStorage
-      try {
-        localStorage.setItem('route_backup', JSON.stringify(backup));
-        console.log('💾 Auto-backup fallback to localStorage successful');
-      } catch (fallbackError) {
-        console.error('❌ Both IndexedDB and localStorage backup failed');
-      }
+  // Get current elapsed time from timer if running
+  let currentElapsed = this.elapsedTime;
+  
+  // If tracking is active, get live elapsed time from timer
+  if (this.isTracking) {
+    const app = window.AccessNatureApp;
+    const timer = app?.getController('timer');
+    if (timer && timer.isTimerRunning()) {
+      currentElapsed = timer.getCurrentElapsed();
     }
   }
+
+  const backup = {
+    routeData: this.routeData,
+    pathPoints: this.pathPoints,
+    totalDistance: this.totalDistance,
+    elapsedTime: currentElapsed,  // Fixed: Use live elapsed time
+    startTime: this.startTime,
+    isTracking: this.isTracking,
+    isPaused: this.isPaused,
+    backupTime: Date.now(),
+    deviceInfo: {
+      userAgent: navigator.userAgent,
+      url: window.location.href
+    }
+  };
+
+  try {
+    if (this.dbReady) {
+      await this.routeDB.saveBackup(backup);
+      console.log(`💾 Auto-backup to IndexedDB: ${this.routeData.length} points, ${this.totalDistance.toFixed(2)} km, ${Math.floor(currentElapsed/1000)}s elapsed`);
+    } else {
+      localStorage.setItem('route_backup', JSON.stringify(backup));
+      console.log(`💾 Auto-backup to localStorage: ${this.routeData.length} points, ${Math.floor(currentElapsed/1000)}s elapsed`);
+    }
+    this.lastBackupTime = Date.now();
+  } catch (error) {
+    console.warn('Auto-save failed:', error);
+    // Fallback to localStorage
+    try {
+      localStorage.setItem('route_backup', JSON.stringify(backup));
+      console.log('💾 Auto-backup fallback to localStorage successful');
+    } catch (fallbackError) {
+      console.error('❌ Both IndexedDB and localStorage backup failed');
+    }
+  }
+}
 
   // IMPROVED: Enhanced backup checking with better error handling
   async checkForUnsavedRoute() {
@@ -494,24 +505,24 @@ export class AppState {
 
   // FIXED: Redraw route on map using enhanced map controller
   redrawRouteOnMap() {
-    try {
-      const app = window.AccessNatureApp;
-      const mapController = app?.getController('map');
+  try {
+    const app = window.AccessNatureApp;
+    const mapController = app?.getController('map');
+    
+    if (mapController && this.routeData.length > 0) {
+      console.log('🗺️ Redrawing restored route on map...');
       
-      if (mapController && this.routeData.length > 0) {
-        console.log('🗺️ Redrawing restored route on map...');
-        
-        // Use the enhanced showRouteData method that handles all data types
-        mapController.showRouteData(this.routeData);
-        
-        console.log('✅ Route redrawn on map using showRouteData');
-      } else {
-        console.warn('⚠️ Map controller not available or no route data to redraw');
-      }
-    } catch (error) {
-      console.error('❌ Failed to redraw route on map:', error);
+      // Use your existing showRouteData method
+      mapController.showRouteData(this.routeData);
+      
+      console.log('✅ Route redrawn on map using showRouteData');
+    } else {
+      console.warn('⚠️ Map controller not available or no route data');
     }
+  } catch (error) {
+    console.error('❌ Failed to redraw route on map:', error);
   }
+}
 
   // Auto backup system
   startAutoBackup() {

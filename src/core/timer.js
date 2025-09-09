@@ -37,35 +37,35 @@ export class TimerController {
 
   // FIXED: Stop and return final elapsed time
   stop() {
-    if (!this.isRunning) return this.elapsedTime;
+  if (!this.isRunning) return this.elapsedTime;
 
-    this.isRunning = false;
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-    }
-
-    // Calculate final elapsed time
-    this.elapsedTime = Date.now() - this.startTime;
-    console.log(`⏱️ Timer stopped at: ${this.formatTime(this.elapsedTime)}`);
-    
-    return this.elapsedTime;
+  this.isRunning = false;
+  if (this.timerInterval) {  // Changed from intervalId to timerInterval
+    clearInterval(this.timerInterval);
+    this.timerInterval = null;
   }
+
+  // Calculate final elapsed time
+  this.elapsedTime = Date.now() - this.startTime;
+  console.log(`⏱️ Timer stopped at: ${this.formatTime(this.elapsedTime)}`);
+  
+  return this.elapsedTime;
+}
 
   // FIXED: Pause preserving elapsed time
   pause() {
-    if (!this.isRunning) return;
+  if (!this.isRunning) return;
 
-    this.isRunning = false;
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-    }
-
-    // Save elapsed time at pause
-    this.elapsedTime = Date.now() - this.startTime;
-    console.log(`⏸️ Timer paused at: ${this.formatTime(this.elapsedTime)}`);
+  this.isRunning = false;
+  if (this.timerInterval) {  // Changed from intervalId to timerInterval
+    clearInterval(this.timerInterval);
+    this.timerInterval = null;
   }
+
+  // Save elapsed time at pause
+  this.elapsedTime = Date.now() - this.startTime;
+  console.log(`⏸️ Timer paused at: ${this.formatTime(this.elapsedTime)}`);
+}
 
   // FIXED: Resume from paused elapsed time
   resume() {
