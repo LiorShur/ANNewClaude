@@ -16,24 +16,24 @@ export class TimerController {
 
   // FIXED: Start with optional elapsed time for restoration
   start(resumeFromElapsed = 0) {
-    if (this.isRunning) {
-      console.warn('Timer already running');
-      return;
-    }
+  if (this.isRunning) return;
 
-    console.log(`⏱️ Timer starting${resumeFromElapsed > 0 ? ` (resuming from ${this.formatTime(resumeFromElapsed)})` : ''}`);
-    
-    // Set start time accounting for previously elapsed time
-    this.startTime = Date.now() - resumeFromElapsed;
-    this.elapsedTime = resumeFromElapsed;
-    this.isRunning = true;
-
-    this.intervalId = setInterval(() => {
-      this.updateTimer();
-    }, 1000);
-
+  console.log(`⏱️ Timer starting${resumeFromElapsed > 0 ? ` (resuming from ${this.formatTime(resumeFromElapsed)})` : ''}`);
+  
+  // Set the elapsed time first
+  this.elapsedTime = resumeFromElapsed;
+  
+  // Set start time accounting for already elapsed time
+  this.startTime = Date.now() - resumeFromElapsed;
+  this.isRunning = true;
+  
+  this.timerInterval = setInterval(() => {
+    this.updateTimer();  // Use your existing method name
     this.updateDisplay();
-  }
+  }, 1000);
+  
+  this.updateDisplay();
+}
 
   // FIXED: Stop and return final elapsed time
   stop() {
@@ -106,13 +106,13 @@ export class TimerController {
   }
 
   formatTime(milliseconds) {
-    const totalSeconds = Math.floor(milliseconds / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
 
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  }
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
 
   // NEW: Reset timer completely
   reset() {
