@@ -68,24 +68,62 @@ async initialize() {
   }
 }
 
-// NEW: Handle unsaved route restoration
+// 1. FIXED: Update the handleUnsavedRoute method
 async handleUnsavedRoute() {
   try {
-    const backupData = this.controllers.state.checkForUnsavedRoute();
+    // IMPORTANT: Wait for state controller to be ready
+    await this.waitForStateController();
+    
+    const backupData = await this.controllers.state.checkForUnsavedRoute();
     
     if (backupData) {
       const success = await this.showRestoreDialog(backupData);
       
       if (success) {
         console.log('✅ Route restoration completed');
+        
+        // FIXED: Set up timer with restored elapsed time
+        const timerController = this.controllers.timer;
+        const elapsedTime = this.controllers.state.getElapsedTime();
+        
+        if (timerController && elapsedTime > 0) {
+          timerController.setElapsedTime(elapsedTime);
+          console.log(`⏱️ Timer initialized with ${this.formatElapsedTime(elapsedTime)} elapsed`);
+        }
+        
       } else {
         console.log('🗑️ User chose to discard backup or restoration failed');
       }
     }
   } catch (error) {
     console.error('❌ Error handling unsaved route:', error);
-    this.controllers.state.clearRouteBackup();
+    try {
+      await this.controllers.state.clearRouteBackup();
+    } catch (clearError) {
+      console.error('❌ Failed to clear backup:', clearError);
+    }
   }
+}
+
+// 2. NEW: Wait for state controller to be ready
+async waitForStateController() {
+  let attempts = 0;
+  const maxAttempts = 10;
+  
+  while (attempts < maxAttempts) {
+    if (this.controllers.state && this.controllers.state.dbReady !== undefined) {
+      // Wait a bit more if IndexedDB is still initializing
+      if (this.controllers.state.dbReady === false) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      return;
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 100));
+    attempts++;
+  }
+  
+  console.warn('⚠️ State controller initialization timeout');
 }
 
 // NEW: Show enhanced restore dialog

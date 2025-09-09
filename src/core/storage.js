@@ -1,4 +1,5 @@
-// Enhanced storage with IndexedDB migration
+// FIXED: Storage controller with proper backup/restore data structures
+// Enhanced storage with IndexedDB migration - CORRECTED VERSION
 import { RouteDB } from './indexeddb.js';
 
 export class AppState {
@@ -35,118 +36,108 @@ export class AppState {
     }
   }
 
-  // Migrate existing localStorage data to IndexedDB
-// IMPROVED: Better migration with error handling
-async migrateFromLocalStorage() {
-  try {
-    // Check if migration already happened
-    const migrationStatus = localStorage.getItem('indexeddb_migration');
-    if (migrationStatus === 'completed') {
-      console.log('ℹ️ Migration already completed, checking for orphaned data...');
-      
-      // Check if there's backup data that wasn't migrated
-      const backupData = localStorage.getItem('sessions_backup_pre_migration');
-      if (backupData) {
-        const existingRoutes = await this.routeDB.getAllRoutes();
-        if (existingRoutes.length === 0) {
-          console.log('🔄 Found orphaned backup data, attempting recovery...');
-          await this.recoverFromBackup();
+  // IMPROVED: Migrate existing localStorage data to IndexedDB
+  async migrateFromLocalStorage() {
+    try {
+      // Check if migration already happened
+      const migrationStatus = localStorage.getItem('indexeddb_migration');
+      if (migrationStatus === 'completed') {
+        console.log('ℹ️ Migration already completed, checking for orphaned data...');
+        
+        // Check if there's backup data that wasn't migrated
+        const backupData = localStorage.getItem('sessions_backup_pre_migration');
+        if (backupData) {
+          const existingRoutes = await this.routeDB.getAllRoutes();
+          if (existingRoutes.length === 0) {
+            console.log('🔄 Found orphaned backup data, attempting recovery...');
+            await this.recoverFromBackup();
+          }
+        }
+        return;
+      }
+
+      // Migrate sessions
+      const oldSessions = JSON.parse(localStorage.getItem('sessions') || '[]');
+      if (oldSessions.length > 0) {
+        console.log(`🔄 Migrating ${oldSessions.length} routes from localStorage to IndexedDB...`);
+        
+        let migratedCount = 0;
+        for (const session of oldSessions) {
+          try {
+            await this.routeDB.saveRoute({
+              ...session,
+              migrated: true,
+              migratedAt: new Date().toISOString(),
+              migratedFrom: 'localStorage',
+              version: '2.0'
+            });
+            migratedCount++;
+            console.log(`✅ Migrated: ${session.name}`);
+          } catch (error) {
+            console.error(`❌ Failed to migrate route ${session.name}:`, error);
+          }
+        }
+        
+        if (migratedCount > 0) {
+          // Keep a backup in localStorage, then clear
+          localStorage.setItem('sessions_backup_pre_migration', localStorage.getItem('sessions'));
+          localStorage.removeItem('sessions');
+          console.log(`✅ Successfully migrated ${migratedCount}/${oldSessions.length} routes`);
         }
       }
-      return;
-    }
-
-    // Migrate sessions
-    const oldSessions = JSON.parse(localStorage.getItem('sessions') || '[]');
-    if (oldSessions.length > 0) {
-      console.log(`🔄 Migrating ${oldSessions.length} routes from localStorage to IndexedDB...`);
       
-      let migratedCount = 0;
+      // Migrate backup
+      const oldBackup = localStorage.getItem('route_backup');
+      if (oldBackup) {
+        try {
+          await this.routeDB.saveBackup(JSON.parse(oldBackup));
+          localStorage.removeItem('route_backup');
+          console.log('✅ Route backup migrated to IndexedDB');
+        } catch (error) {
+          console.error('❌ Failed to migrate backup:', error);
+        }
+      }
+
+      // Mark migration as completed
+      localStorage.setItem('indexeddb_migration', 'completed');
+      console.log('✅ IndexedDB migration completed successfully');
+      
+    } catch (error) {
+      console.error('❌ Migration failed:', error);
+    }
+  }
+
+  // NEW: Recover from backup data
+  async recoverFromBackup() {
+    try {
+      const backupData = localStorage.getItem('sessions_backup_pre_migration');
+      if (!backupData) return;
+      
+      const oldSessions = JSON.parse(backupData);
+      console.log(`🔄 Recovering ${oldSessions.length} routes from backup...`);
+      
+      let recoveredCount = 0;
       for (const session of oldSessions) {
         try {
           await this.routeDB.saveRoute({
             ...session,
             migrated: true,
             migratedAt: new Date().toISOString(),
-            migratedFrom: 'localStorage',
+            migratedFrom: 'localStorage_backup_recovery',
             version: '2.0'
           });
-          migratedCount++;
-          console.log(`✅ Migrated: ${session.name}`);
+          recoveredCount++;
         } catch (error) {
-          console.error(`❌ Failed to migrate route ${session.name}:`, error);
+          console.error(`❌ Failed to recover route ${session.name}:`, error);
         }
       }
       
-      if (migratedCount > 0) {
-        // Keep a backup in localStorage, then clear
-        localStorage.setItem('sessions_backup_pre_migration', localStorage.getItem('sessions'));
-        localStorage.removeItem('sessions');
-        console.log(`✅ Successfully migrated ${migratedCount}/${oldSessions.length} routes`);
-      }
+      console.log(`✅ Successfully recovered ${recoveredCount}/${oldSessions.length} routes`);
+      
+    } catch (error) {
+      console.error('❌ Recovery failed:', error);
     }
-    
-    // Migrate backup
-    const oldBackup = localStorage.getItem('route_backup');
-    if (oldBackup) {
-      try {
-        await this.routeDB.saveBackup(JSON.parse(oldBackup));
-        localStorage.removeItem('route_backup');
-        console.log('✅ Route backup migrated to IndexedDB');
-      } catch (error) {
-        console.error('❌ Failed to migrate backup:', error);
-      }
-    }
-
-    // Migrate settings
-    const settingsToMigrate = ['darkMode', 'compassEnabled', 'autoBackup'];
-    for (const setting of settingsToMigrate) {
-      const value = localStorage.getItem(setting);
-      if (value !== null) {
-        await this.routeDB.saveSetting(setting, value);
-      }
-    }
-    
-    // Mark migration as completed
-    localStorage.setItem('indexeddb_migration', 'completed');
-    console.log('✅ IndexedDB migration completed successfully');
-    
-  } catch (error) {
-    console.error('❌ Migration failed:', error);
   }
-}
-
-// NEW: Recover from backup data
-async recoverFromBackup() {
-  try {
-    const backupData = localStorage.getItem('sessions_backup_pre_migration');
-    if (!backupData) return;
-    
-    const oldSessions = JSON.parse(backupData);
-    console.log(`🔄 Recovering ${oldSessions.length} routes from backup...`);
-    
-    let recoveredCount = 0;
-    for (const session of oldSessions) {
-      try {
-        await this.routeDB.saveRoute({
-          ...session,
-          migrated: true,
-          migratedAt: new Date().toISOString(),
-          migratedFrom: 'localStorage_backup_recovery',
-          version: '2.0'
-        });
-        recoveredCount++;
-      } catch (error) {
-        console.error(`❌ Failed to recover route ${session.name}:`, error);
-      }
-    }
-    
-    console.log(`✅ Successfully recovered ${recoveredCount}/${oldSessions.length} routes`);
-    
-  } catch (error) {
-    console.error('❌ Recovery failed:', error);
-  }
-}
 
   // Enhanced route point addition with better backup timing
   addRoutePoint(entry) {
@@ -348,136 +339,133 @@ async recoverFromBackup() {
     }
   }
 
-  // Enhanced backup checking
   // IMPROVED: Enhanced backup checking with better error handling
-async checkForUnsavedRoute() {
-  try {
-    let backup = null;
-    
-    // Try IndexedDB first
-    if (this.dbReady) {
-      try {
-        backup = await this.routeDB.getBackup();
-        if (backup) {
-          console.log('📥 Backup found in IndexedDB');
-        }
-      } catch (dbError) {
-        console.warn('⚠️ IndexedDB backup check failed:', dbError);
-      }
-    }
-    
-    // Fallback to localStorage
-    if (!backup) {
-      try {
-        const localBackup = localStorage.getItem('route_backup');
-        if (localBackup) {
-          backup = JSON.parse(localBackup);
-          console.log('📥 Backup found in localStorage');
-        }
-      } catch (parseError) {
-        console.warn('⚠️ localStorage backup parse failed:', parseError);
-        // Remove corrupted backup
-        localStorage.removeItem('route_backup');
-      }
-    }
-    
-    if (!backup) {
-      console.log('📭 No backup found');
-      return null;
-    }
-
-    // Validate backup structure
-    if (typeof backup !== 'object' || !backup.routeData || !Array.isArray(backup.routeData)) {
-      console.warn('⚠️ Invalid backup structure, removing...');
-      await this.clearRouteBackup();
-      return null;
-    }
-
-    // Validate backup age
-    const backupTime = backup.backupTime || 0;
-    const backupAge = Date.now() - backupTime;
-    const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-    
-    if (backupAge > maxAge) {
-      console.log('⏰ Route backup too old, removing...');
-      await this.clearRouteBackup();
-      return null;
-    }
-
-    // Validate backup content
-    if (backup.routeData.length === 0) {
-      console.log('📭 Route backup empty, removing...');
-      await this.clearRouteBackup();
-      return null;
-    }
-
-    const locationPoints = backup.routeData.filter(p => p && p.type === 'location').length;
-    console.log(`🔍 Found valid route backup: ${backup.routeData.length} points (${locationPoints} GPS), ${backup.totalDistance?.toFixed(2) || 0} km`);
-    
-    return backup;
-    
-  } catch (error) {
-    console.error('❌ Failed to check for unsaved route:', error);
+  async checkForUnsavedRoute() {
     try {
-      await this.clearRouteBackup();
-    } catch (clearError) {
-      console.error('❌ Failed to clear corrupted backup:', clearError);
-    }
-    return null;
-  }
-}
+      let backup = null;
+      
+      // Try IndexedDB first
+      if (this.dbReady) {
+        try {
+          backup = await this.routeDB.getBackup();
+          if (backup) {
+            console.log('📥 Backup found in IndexedDB');
+          }
+        } catch (dbError) {
+          console.warn('⚠️ IndexedDB backup check failed:', dbError);
+        }
+      }
+      
+      // Fallback to localStorage
+      if (!backup) {
+        try {
+          const localBackup = localStorage.getItem('route_backup');
+          if (localBackup) {
+            backup = JSON.parse(localBackup);
+            console.log('📥 Backup found in localStorage');
+          }
+        } catch (parseError) {
+          console.warn('⚠️ localStorage backup parse failed:', parseError);
+          // Remove corrupted backup
+          localStorage.removeItem('route_backup');
+        }
+      }
+      
+      if (!backup) {
+        console.log('📭 No backup found');
+        return null;
+      }
 
-  // Enhanced route restoration
-  // FIXED: Enhanced route restoration with better validation
-restoreFromBackup(backupData) {
-  try {
-    // Validate backup data structure
-    if (!backupData || typeof backupData !== 'object') {
-      console.error('❌ Invalid backup data structure');
+      // Validate backup structure
+      if (typeof backup !== 'object' || !backup.routeData || !Array.isArray(backup.routeData)) {
+        console.warn('⚠️ Invalid backup structure, removing...');
+        await this.clearRouteBackup();
+        return null;
+      }
+
+      // Validate backup age
+      const backupTime = backup.backupTime || 0;
+      const backupAge = Date.now() - backupTime;
+      const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+      
+      if (backupAge > maxAge) {
+        console.log('⏰ Route backup too old, removing...');
+        await this.clearRouteBackup();
+        return null;
+      }
+
+      // Validate backup content
+      if (backup.routeData.length === 0) {
+        console.log('📭 Route backup empty, removing...');
+        await this.clearRouteBackup();
+        return null;
+      }
+
+      const locationPoints = backup.routeData.filter(p => p && p.type === 'location').length;
+      console.log(`🔍 Found valid route backup: ${backup.routeData.length} points (${locationPoints} GPS), ${backup.totalDistance?.toFixed(2) || 0} km`);
+      
+      return backup;
+      
+    } catch (error) {
+      console.error('❌ Failed to check for unsaved route:', error);
+      try {
+        await this.clearRouteBackup();
+      } catch (clearError) {
+        console.error('❌ Failed to clear corrupted backup:', clearError);
+      }
+      return null;
+    }
+  }
+
+  // FIXED: Enhanced route restoration with proper data structure handling
+  restoreFromBackup(backupData) {
+    try {
+      // Validate backup data structure
+      if (!backupData || typeof backupData !== 'object') {
+        console.error('❌ Invalid backup data structure');
+        return false;
+      }
+      
+      // Handle both old and new backup formats
+      this.routeData = Array.isArray(backupData.routeData) ? backupData.routeData : [];
+      this.pathPoints = Array.isArray(backupData.pathPoints) ? backupData.pathPoints : [];
+      this.totalDistance = typeof backupData.totalDistance === 'number' ? backupData.totalDistance : 0;
+      this.elapsedTime = typeof backupData.elapsedTime === 'number' ? backupData.elapsedTime : 0;
+      this.startTime = backupData.startTime || null;
+      
+      // FIXED: Rebuild pathPoints from routeData if missing
+      if (this.pathPoints.length === 0 && this.routeData.length > 0) {
+        console.log('🔧 Rebuilding pathPoints from routeData...');
+        const locationPoints = this.routeData.filter(p => p && p.type === 'location' && p.coords);
+        this.pathPoints = locationPoints.map(p => p.coords);
+        console.log(`✅ Rebuilt ${this.pathPoints.length} pathPoints from location data`);
+      }
+      
+      // Set last coords from path points if available
+      if (this.pathPoints.length > 0) {
+        this.lastCoords = this.pathPoints[this.pathPoints.length - 1];
+      }
+      
+      // Don't auto-resume tracking
+      this.isTracking = false;
+      this.isPaused = false;
+
+      console.log(`✅ Route restored: ${this.routeData.length} points, ${this.totalDistance.toFixed(2)} km, ${this.pathPoints.length} path points`);
+      
+      // Update UI displays
+      this.updateDistanceDisplay();
+      this.updateTimerDisplay();
+      
+      // FIXED: Restore route on map with proper data
+      this.redrawRouteOnMap();
+      
+      return true;
+      
+    } catch (error) {
+      console.error('❌ Failed to restore route from backup:', error);
       return false;
     }
-    
-    // Handle both old and new backup formats
-    this.routeData = Array.isArray(backupData.routeData) ? backupData.routeData : [];
-    this.pathPoints = Array.isArray(backupData.pathPoints) ? backupData.pathPoints : [];
-    this.totalDistance = typeof backupData.totalDistance === 'number' ? backupData.totalDistance : 0;
-    this.elapsedTime = typeof backupData.elapsedTime === 'number' ? backupData.elapsedTime : 0;
-    this.startTime = backupData.startTime || null;
-    
-    // Set last coords from path points if available
-    if (this.pathPoints.length > 0) {
-      this.lastCoords = this.pathPoints[this.pathPoints.length - 1];
-    } else {
-      // Try to extract from route data
-      const locationPoints = this.routeData.filter(p => p && p.type === 'location' && p.coords);
-      if (locationPoints.length > 0) {
-        const lastPoint = locationPoints[locationPoints.length - 1];
-        this.lastCoords = lastPoint.coords;
-        // Rebuild pathPoints from location data
-        this.pathPoints = locationPoints.map(p => p.coords);
-      }
-    }
-    
-    // Don't auto-resume tracking
-    this.isTracking = false;
-    this.isPaused = false;
-
-    console.log(`✅ Route restored: ${this.routeData.length} points, ${this.totalDistance.toFixed(2)} km`);
-    
-    // Update UI displays
-    this.updateDistanceDisplay();
-    this.updateTimerDisplay();
-    
-    // Restore route on map
-    this.redrawRouteOnMap();
-    
-    return true;
-    
-  } catch (error) {
-    console.error('❌ Failed to restore route from backup:', error);
-    return false;
   }
-}
 
   // Update distance display
   updateDistanceDisplay() {
@@ -504,34 +492,21 @@ restoreFromBackup(backupData) {
     }
   }
 
-  // Redraw route on map
+  // FIXED: Redraw route on map using enhanced map controller
   redrawRouteOnMap() {
     try {
       const app = window.AccessNatureApp;
       const mapController = app?.getController('map');
       
-      if (mapController && this.pathPoints.length > 0) {
-        console.log('🗺️ Redrawing route on map...');
+      if (mapController && this.routeData.length > 0) {
+        console.log('🗺️ Redrawing restored route on map...');
         
-        // Clear existing route if method exists
-        if (typeof mapController.clearRoute === 'function') {
-          mapController.clearRoute();
-        }
+        // Use the enhanced showRouteData method that handles all data types
+        mapController.showRouteData(this.routeData);
         
-        // Redraw route segments
-        for (let i = 1; i < this.pathPoints.length; i++) {
-          if (typeof mapController.addRouteSegment === 'function') {
-            mapController.addRouteSegment(this.pathPoints[i-1], this.pathPoints[i]);
-          }
-        }
-        
-        // Update marker to last position
-        const lastPoint = this.pathPoints[this.pathPoints.length - 1];
-        if (typeof mapController.updateMarkerPosition === 'function') {
-          mapController.updateMarkerPosition(lastPoint);
-        }
-        
-        console.log('✅ Route redrawn on map');
+        console.log('✅ Route redrawn on map using showRouteData');
+      } else {
+        console.warn('⚠️ Map controller not available or no route data to redraw');
       }
     } catch (error) {
       console.error('❌ Failed to redraw route on map:', error);

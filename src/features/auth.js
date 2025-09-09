@@ -914,52 +914,71 @@ showCloudRoutesList(routes) {
   }
 }
 
-// UPDATED: Better route loading with statistics
-loadCloudRouteData(route) {
-  const routeStats = `
-📂 Load "${route.routeName}"?
-
-📊 Route Details:
-- Distance: ${route.totalDistance?.toFixed(2) || 0} km
-- GPS Points: ${route.locationCount}
-- Photos: ${route.photoCount}
-- Notes: ${route.noteCount}
-- Original Date: ${route.displayDate}
-
-⚠️ This will clear your current route data.`;
-
-  const confirmed = confirm(routeStats);
+// FIXED: Enhanced route loading with proper map display
+async loadCloudRouteData(route) {
+  const confirmed = confirm(`Load "${route.routeName}"?\n\nThis will clear your current route data.`);
   if (!confirmed) return;
 
   const app = window.AccessNatureApp;
   const state = app?.getController('state');
+  const mapController = app?.getController('map');
+  const timerController = app?.getController('timer');
   
   if (state && route.routeData) {
-    // Clear current data
-    state.clearRouteData();
-    
-    // Load route data
-    route.routeData.forEach(point => {
-      state.addRoutePoint(point);
-    });
-    
-    // Update distance if available
-    if (route.totalDistance) {
-      state.updateDistance(route.totalDistance);
-    }
+    try {
+      console.log(`📥 Loading cloud route: ${route.routeName}`);
+      
+      // Clear current data completely
+      state.clearRouteData();
+      
+      // FIXED: Stop any running timers
+      if (timerController) {
+        timerController.reset();
+      }
+      
+      // Load route data into state
+      route.routeData.forEach(point => {
+        state.addRoutePoint(point);
+      });
+      
+      // FIXED: Rebuild path points for map display
+      const locationPoints = route.routeData.filter(p => p.type === 'location' && p.coords);
+      locationPoints.forEach(p => {
+        state.addPathPoint(p.coords);
+      });
+      
+      // Update distance and time
+      if (route.totalDistance) {
+        state.updateDistance(route.totalDistance);
+      }
+      if (route.elapsedTime) {
+        state.setElapsedTime(route.elapsedTime);
+        // Set timer display without starting it
+        if (timerController) {
+          timerController.setElapsedTime(route.elapsedTime);
+        }
+      }
 
-    // Load accessibility data if available
-    if (route.accessibilityData) {
-      localStorage.setItem('accessibilityData', JSON.stringify(route.accessibilityData));
-    }
+      // Load accessibility data if available
+      if (route.accessibilityData) {
+        localStorage.setItem('accessibilityData', JSON.stringify(route.accessibilityData));
+      }
 
-    this.showSuccessMessage(`✅ "${route.routeName}" loaded from cloud!`);
-    console.log('✅ Cloud route loaded:', route.routeName);
-    
-    // Update map if available
-    const mapController = app?.getController('map');
-    if (mapController && typeof mapController.showRouteData === 'function') {
-      mapController.showRouteData(route.routeData);
+      // FIXED: Display route on map using the enhanced method
+      if (mapController && typeof mapController.showRouteData === 'function') {
+        console.log('🗺️ Displaying route on map...');
+        mapController.showRouteData(route.routeData);
+        console.log('✅ Route displayed on map');
+      } else {
+        console.warn('⚠️ Map controller showRouteData method not available');
+      }
+
+      this.showSuccessMessage(`✅ "${route.routeName}" loaded from cloud!`);
+      console.log('✅ Cloud route loaded successfully:', route.routeName);
+      
+    } catch (error) {
+      console.error('❌ Failed to load cloud route:', error);
+      this.showAuthError('Failed to load route: ' + error.message);
     }
   }
 }

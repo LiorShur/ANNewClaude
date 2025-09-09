@@ -1,97 +1,133 @@
-// Timer functionality
+// FIXED: Timer functionality with proper resume support
 export class TimerController {
   constructor() {
     this.startTime = null;
     this.elapsedTime = 0;
-    this.timerInterval = null;
     this.isRunning = false;
-    this.element = null;
+    this.intervalId = null;
+    this.pausedTime = 0;
   }
 
   initialize() {
     this.element = document.getElementById('timer');
     this.updateDisplay();
+    console.log('✅ Timer controller initialized');
   }
 
-  start() {
-    if (this.isRunning) return;
+  // FIXED: Start with optional elapsed time for restoration
+  start(resumeFromElapsed = 0) {
+    if (this.isRunning) {
+      console.warn('Timer already running');
+      return;
+    }
 
-    this.startTime = Date.now() - this.elapsedTime;
-    this.isRunning = true;
+    console.log(`⏱️ Timer starting${resumeFromElapsed > 0 ? ` (resuming from ${this.formatTime(resumeFromElapsed)})` : ''}`);
     
-    this.timerInterval = setInterval(() => {
-      this.updateElapsedTime();
-      this.updateDisplay();
+    // Set start time accounting for previously elapsed time
+    this.startTime = Date.now() - resumeFromElapsed;
+    this.elapsedTime = resumeFromElapsed;
+    this.isRunning = true;
+
+    this.intervalId = setInterval(() => {
+      this.updateTimer();
     }, 1000);
-  }
 
-  stop() {
-    if (!this.isRunning) return;
-
-    this.clearInterval();
-    this.updateElapsedTime();
     this.updateDisplay();
-    this.isRunning = false;
   }
 
+  // FIXED: Stop and return final elapsed time
+  stop() {
+    if (!this.isRunning) return this.elapsedTime;
+
+    this.isRunning = false;
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
+
+    // Calculate final elapsed time
+    this.elapsedTime = Date.now() - this.startTime;
+    console.log(`⏱️ Timer stopped at: ${this.formatTime(this.elapsedTime)}`);
+    
+    return this.elapsedTime;
+  }
+
+  // FIXED: Pause preserving elapsed time
   pause() {
     if (!this.isRunning) return;
 
-    this.clearInterval();
-    this.updateElapsedTime();
-    this.updateDisplay();
+    this.isRunning = false;
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
+
+    // Save elapsed time at pause
+    this.elapsedTime = Date.now() - this.startTime;
+    console.log(`⏸️ Timer paused at: ${this.formatTime(this.elapsedTime)}`);
   }
 
+  // FIXED: Resume from paused elapsed time
   resume() {
     if (this.isRunning) return;
 
-    this.startTime = Date.now() - this.elapsedTime;
+    console.log(`▶️ Timer resuming from: ${this.formatTime(this.elapsedTime)}`);
     
-    this.timerInterval = setInterval(() => {
-      this.updateElapsedTime();
-      this.updateDisplay();
-    }, 1000);
+    // Restart timer from current elapsed time
+    this.start(this.elapsedTime);
   }
 
-  reset() {
-    this.clearInterval();
-    this.startTime = null;
-    this.elapsedTime = 0;
-    this.isRunning = false;
-    this.updateDisplay();
-  }
-
-  updateElapsedTime() {
-    if (this.startTime) {
-      this.elapsedTime = Date.now() - this.startTime;
+  // NEW: Get current elapsed time
+  getCurrentElapsed() {
+    if (this.isRunning) {
+      return Date.now() - this.startTime;
     }
+    return this.elapsedTime;
+  }
+
+  // NEW: Set elapsed time (for restoration)
+  setElapsedTime(elapsed) {
+    this.elapsedTime = elapsed;
+    this.updateDisplay();
+    console.log(`⏱️ Timer set to: ${this.formatTime(elapsed)}`);
+  }
+
+  updateTimer() {
+    if (!this.isRunning) return;
+
+    this.elapsedTime = Date.now() - this.startTime;
+    this.updateDisplay();
   }
 
   updateDisplay() {
     if (!this.element) return;
 
-    const totalSeconds = Math.floor(this.elapsedTime / 1000);
+    this.element.textContent = this.formatTime(this.elapsedTime);
+  }
+
+  formatTime(milliseconds) {
+    const totalSeconds = Math.floor(milliseconds / 1000);
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
 
-    const formatted = `${this.pad(hours)}:${this.pad(minutes)}:${this.pad(seconds)}`;
-    this.element.textContent = formatted;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   }
 
-  pad(number) {
-    return number.toString().padStart(2, '0');
-  }
-
-  clearInterval() {
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-      this.timerInterval = null;
-    }
+  // NEW: Reset timer completely
+  reset() {
+    this.stop();
+    this.elapsedTime = 0;
+    this.startTime = null;
+    this.updateDisplay();
+    console.log('🔄 Timer reset');
   }
 
   getElapsedTime() {
-    this.updateElapsedTime();
-    return this.elapsedTime;
+    return this.getCurrentElapsed();
+  }
+
+  isTimerRunning() {
+    return this.isRunning;
   }
 }

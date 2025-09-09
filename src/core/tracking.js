@@ -14,51 +14,53 @@ export class TrackingController {
     this.dependencies = deps;
   }
 
-  async start() {
-    if (this.isTracking) return false;
+async start() {
+  if (this.isTracking) return false;
 
-    if (!navigator.geolocation) {
-      throw new Error('Geolocation not supported by this browser');
-    }
+  if (!navigator.geolocation) {
+    throw new Error('Geolocation not supported by this browser');
+  }
 
-    console.log('🚀 Starting GPS tracking...');
+  console.log('🚀 Starting GPS tracking...');
 
-    // Check if we're resuming a restored route
+  // FIXED: Check if we're resuming a restored route
   const currentElapsed = this.appState.getElapsedTime();
-  const isResuming = currentElapsed > 0;
+  const isResuming = currentElapsed > 0 && this.appState.getRouteData().length > 0;
 
   if (!isResuming) {
     // Starting fresh - clear any previous route data and set start time
     this.appState.clearRouteData();
     this.appState.setStartTime(Date.now());
   } else {
-    // Resuming - adjust start time to account for elapsed time
+    // FIXED: Resuming - adjust start time to account for elapsed time
     const adjustedStartTime = Date.now() - currentElapsed;
     this.appState.setStartTime(adjustedStartTime);
     console.log(`🔄 Resuming route with ${this.formatTime(currentElapsed)} elapsed`);
   }
 
-    this.isTracking = true;
-    this.isPaused = false;
-    this.appState.setTrackingState(true);
+  this.isTracking = true;
+  this.isPaused = false;
+  this.appState.setTrackingState(true);
 
-    // Start GPS watch
-    this.watchId = navigator.geolocation.watchPosition(
-      (position) => this.handlePositionUpdate(position),
-      (error) => this.handlePositionError(error),
-      {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 15000
-      }
-    );
+  // Start GPS watch
+  this.watchId = navigator.geolocation.watchPosition(
+    (position) => this.handlePositionUpdate(position),
+    (error) => this.handlePositionError(error),
+    {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 15000
+    }
+  );
 
-// Start timer with current elapsed time (if resuming)
+  // FIXED: Start timer with current elapsed time (if resuming)
   if (this.dependencies.timer) {
     if (isResuming) {
       this.dependencies.timer.start(currentElapsed);
+      console.log(`⏱️ Timer resumed from ${this.formatTime(currentElapsed)}`);
     } else {
       this.dependencies.timer.start();
+      console.log('⏱️ Timer started fresh');
     }
   }
 
@@ -66,7 +68,6 @@ export class TrackingController {
   
   if (isResuming) {
     console.log('✅ GPS tracking resumed successfully');
-    this.showSuccessMessage('🚀 Tracking resumed from where you left off!');
   } else {
     console.log('✅ GPS tracking started successfully');
   }

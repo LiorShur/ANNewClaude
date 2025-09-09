@@ -37,3 +37,44 @@ html, body {
   outline: 2px solid #4CAF50;
   outline-offset: 2px;
 }
+
+.custom-div-icon {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+.photo-marker {
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #4CAF50;
+  border-radius: 50%;
+}
+
+.note-marker {
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #FFC107;
+  border-radius: 50%;
+}
+
+.location-marker {
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #2196F3;
+  border-radius: 50%;
+}
+
+.firebase-route-marker {
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #FF5722;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
