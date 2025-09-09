@@ -430,6 +430,7 @@ export class AppState {
 
   // FIXED: Enhanced route restoration with proper data structure handling
   restoreFromBackup(backupData) {
+    console.log('🔧 RESTORE BACKUP CALLED'); // Add this line
     try {
       // Validate backup data structure
       if (!backupData || typeof backupData !== 'object') {
@@ -468,7 +469,9 @@ export class AppState {
       this.updateTimerDisplay();
       
       // FIXED: Restore route on map with proper data
+      console.log('🗺️ About to call redrawRouteOnMap...');
       this.redrawRouteOnMap();
+      console.log('🗺️ redrawRouteOnMap completed');
       
       return true;
       
@@ -504,20 +507,34 @@ export class AppState {
   }
 
   // FIXED: Redraw route on map using enhanced map controller
-  redrawRouteOnMap() {
+  // In your redrawRouteOnMap method, add logging:
+redrawRouteOnMap() {
   try {
+    console.log('🗺️ redrawRouteOnMap called with:', this.routeData.length, 'points');
+    
     const app = window.AccessNatureApp;
     const mapController = app?.getController('map');
     
     if (mapController && this.routeData.length > 0) {
-      console.log('🗺️ Redrawing restored route on map...');
-      
-      // Use your existing showRouteData method
+      console.log('🗺️ Calling mapController.showRouteData...');
       mapController.showRouteData(this.routeData);
-      
-      console.log('✅ Route redrawn on map using showRouteData');
+      console.log('✅ showRouteData completed');
     } else {
-      console.warn('⚠️ Map controller not available or no route data');
+      console.warn('⚠️ Map controller not ready, scheduling retry...');
+      
+      // FIXED: Retry after controllers are initialized
+      setTimeout(() => {
+        console.log('🔄 Retrying map redraw...');
+        const retryApp = window.AccessNatureApp;
+        const retryMap = retryApp?.getController('map');
+        
+        if (retryMap && this.routeData.length > 0) {
+          console.log('🗺️ Retry successful - calling showRouteData...');
+          retryMap.showRouteData(this.routeData);
+        } else {
+          console.warn('⚠️ Map controller still not available after retry');
+        }
+      }, 2000); // Wait 2 seconds for controllers to initialize
     }
   } catch (error) {
     console.error('❌ Failed to redraw route on map:', error);
