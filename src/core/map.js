@@ -306,54 +306,16 @@ export class MapController {
   }
 
   setRotation(angle) {
-  const mapContainer = document.getElementById('map-container');
-  if (mapContainer) {
-    // Store the rotation angle for CSS variable
-    mapContainer.style.setProperty('--rotation-angle', `${-angle}deg`);
-    
-    // Method 1: Use oversized container approach
-    mapContainer.classList.add('rotating');
-    mapContainer.style.transform = `rotate(${-angle}deg)`;
-    
-    // Method 2: Alternative - Use scale with rotation (uncomment if preferred)
-    // mapContainer.classList.add('rotating-scaled');
-    // mapContainer.style.transform = `rotate(${-angle}deg) scale(1.42)`;
-    
-    // Add body class to hide overflow
-    document.body.classList.add('map-rotating');
-    
-    // Force Leaflet to recalculate its size
-    if (this.map) {
-      setTimeout(() => {
-        this.map.invalidateSize();
-      }, 350); // After transition completes
+    const mapContainer = document.getElementById('map-container');
+    if (mapContainer) {
+      mapContainer.style.transform = `rotate(${-angle}deg)`;
     }
   }
-}
 
   resetRotation() {
-  const mapContainer = document.getElementById('map-container');
-  if (mapContainer) {
-    // Remove rotation classes
-    mapContainer.classList.remove('rotating', 'rotating-scaled');
-    mapContainer.style.transform = 'rotate(0deg)';
-    mapContainer.style.removeProperty('--rotation-angle');
-    
-    // Reset container size and position
-    mapContainer.style.width = '100vw';
-    mapContainer.style.height = '100vh';
-    mapContainer.style.top = '0';
-    mapContainer.style.left = '0';
-    
-    // Remove body class
-    document.body.classList.remove('map-rotating');
-    
-    // Force Leaflet to recalculate its size
-    if (this.map) {
-      setTimeout(() => {
-        this.map.invalidateSize();
-      }, 350);
+    const mapContainer = document.getElementById('map-container');
+    if (mapContainer) {
+      mapContainer.style.transform = 'rotate(0deg)';
     }
   }
-}
 }
