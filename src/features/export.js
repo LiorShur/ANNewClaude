@@ -852,6 +852,43 @@ generateRouteSummaryHTML(routeData, routeInfo, accessibilityData) {
             color: #155724;
             margin: 5px 0;
         }
+
+               .accessibility-summary {
+  font-weight: bold;
+  padding: 8px 15px;
+  border-radius: 20px;
+  display: inline-block;
+}
+
+.accessibility-summary.accessible {
+  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.accessibility-summary.partially-accessible {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.accessibility-summary.accessible-with-assistance {
+  background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+.accessibility-summary.not-accessible {
+  background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.summary-item {
+  grid-column: 1 / -1;
+  text-align: center;
+  border: 3px solid #4a7c59;
+}
         
         .map-container {
             grid-column: 1 / -1;
@@ -1151,13 +1188,18 @@ generateRouteSummaryHTML(routeData, routeInfo, accessibilityData) {
 }
 
 // Generate accessibility information section
+// Enhanced generateAccessibilitySection method for export.js
 generateAccessibilitySection(accessibilityData) {
   if (!accessibilityData) return '';
 
+  const formatArray = (arr) => Array.isArray(arr) ? arr.join(', ') : arr;
+
   return `
     <div class="card accessibility-info">
-        <h2>♿ Accessibility Information</h2>
+        <h2>♿ Comprehensive Accessibility Information</h2>
         <div class="accessibility-grid">
+            
+            <!-- Basic Information -->
             ${accessibilityData.trailName ? `
             <div class="accessibility-item">
                 <h4>🗺️ Trail Name</h4>
@@ -1185,17 +1227,147 @@ generateAccessibilitySection(accessibilityData) {
                 <p>${accessibilityData.estimatedTime}</p>
             </div>
             ` : ''}
+
+            <!-- Trip and Route Type -->
+            ${accessibilityData.tripType ? `
+            <div class="accessibility-item">
+                <h4>🚶 Trip Type</h4>
+                <p>${accessibilityData.tripType}</p>
+            </div>
+            ` : ''}
+
+            ${accessibilityData.routeType ? `
+            <div class="accessibility-item">
+                <h4>🔄 Route Type</h4>
+                <p>${accessibilityData.routeType}</p>
+            </div>
+            ` : ''}
             
+            <!-- Mobility Accessibility -->
             ${accessibilityData.wheelchairAccess ? `
             <div class="accessibility-item">
                 <h4>♿ Wheelchair Accessibility</h4>
                 <p>${accessibilityData.wheelchairAccess}</p>
             </div>
             ` : ''}
+
+            ${accessibilityData.disabledParking ? `
+            <div class="accessibility-item">
+                <h4>🚗 Disabled Parking</h4>
+                <p>${formatArray(accessibilityData.disabledParking)}</p>
+                ${accessibilityData.parkingSpaces ? `<p>Spaces available: ${accessibilityData.parkingSpaces}</p>` : ''}
+            </div>
+            ` : ''}
+
+            <!-- Trail Surface -->
+            ${accessibilityData.trailSurface ? `
+            <div class="accessibility-item">
+                <h4>🛤️ Trail Surface</h4>
+                <p>${formatArray(accessibilityData.trailSurface)}</p>
+            </div>
+            ` : ''}
+
+            ${accessibilityData.surfaceQuality ? `
+            <div class="accessibility-item">
+                <h4>🔍 Surface Quality</h4>
+                <p>${accessibilityData.surfaceQuality}</p>
+            </div>
+            ` : ''}
+
+            ${accessibilityData.trailSlopes ? `
+            <div class="accessibility-item">
+                <h4>📈 Trail Slopes</h4>
+                <p>${accessibilityData.trailSlopes}</p>
+            </div>
+            ` : ''}
+
+            <!-- Visual & Environmental -->
+            ${accessibilityData.visualAdaptations ? `
+            <div class="accessibility-item">
+                <h4>👁️ Visual Adaptations</h4>
+                <p>${formatArray(accessibilityData.visualAdaptations)}</p>
+            </div>
+            ` : ''}
+
+            ${accessibilityData.shadeCoverage ? `
+            <div class="accessibility-item">
+                <h4>🌳 Shade Coverage</h4>
+                <p>${accessibilityData.shadeCoverage}</p>
+            </div>
+            ` : ''}
+
+            ${accessibilityData.lighting ? `
+            <div class="accessibility-item">
+                <h4>💡 Lighting</h4>
+                <p>${formatArray(accessibilityData.lighting)}</p>
+            </div>
+            ` : ''}
+
+            <!-- Facilities -->
+            ${accessibilityData.waterFountains ? `
+            <div class="accessibility-item">
+                <h4>🚰 Water Fountains</h4>
+                <p>${accessibilityData.waterFountains}</p>
+            </div>
+            ` : ''}
+
+            ${accessibilityData.seating ? `
+            <div class="accessibility-item">
+                <h4>🪑 Seating</h4>
+                <p>${formatArray(accessibilityData.seating)}</p>
+            </div>
+            ` : ''}
+
+            ${accessibilityData.picnicAreas ? `
+            <div class="accessibility-item">
+                <h4>🧺 Picnic Areas</h4>
+                <p>${formatArray(accessibilityData.picnicAreas)}</p>
+                ${accessibilityData.picnicCount ? `<p>Total areas: ${accessibilityData.picnicCount}</p>` : ''}
+                ${accessibilityData.picnicShade ? `<p>Shaded areas: ${accessibilityData.picnicShade}</p>` : ''}
+                ${accessibilityData.picnicSun ? `<p>Sunny areas: ${accessibilityData.picnicSun}</p>` : ''}
+            </div>
+            ` : ''}
+
+            ${accessibilityData.accessibleViewpoint ? `
+            <div class="accessibility-item">
+                <h4>🔭 Viewpoints</h4>
+                <p>${formatArray(accessibilityData.accessibleViewpoint)}</p>
+            </div>
+            ` : ''}
+
+            ${accessibilityData.restrooms ? `
+            <div class="accessibility-item">
+                <h4>🚻 Accessible Restrooms</h4>
+                <p>${accessibilityData.restrooms}</p>
+            </div>
+            ` : ''}
+
+            <!-- Signage & Navigation -->
+            ${accessibilityData.signage ? `
+            <div class="accessibility-item">
+                <h4>🗺️ Signage & Navigation</h4>
+                <p>${formatArray(accessibilityData.signage)}</p>
+            </div>
+            ` : ''}
+
+            ${accessibilityData.qrCode ? `
+            <div class="accessibility-item">
+                <h4>📱 QR Code Information</h4>
+                <p>${formatArray(accessibilityData.qrCode)}</p>
+            </div>
+            ` : ''}
+
+            <!-- Overall Summary -->
+            ${accessibilityData.accessibilitySummary ? `
+            <div class="accessibility-item summary-item">
+                <h4>📋 Overall Accessibility</h4>
+                <p class="accessibility-summary ${accessibilityData.accessibilitySummary.toLowerCase().replace(/\s+/g, '-')}">${accessibilityData.accessibilitySummary}</p>
+            </div>
+            ` : ''}
             
             ${accessibilityData.additionalNotes ? `
             <div class="accessibility-item" style="grid-column: 1 / -1;">
-                <h4>📋 Additional Notes</h4>
+                <h4>📝 Additional Notes</h4>
                 <p>${accessibilityData.additionalNotes}</p>
             </div>
             ` : ''}

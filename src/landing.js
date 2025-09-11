@@ -10,33 +10,26 @@ class LandingPageController {
     this.isLoading = false;
   }
 
-  async initialize() {
-    try {
-      console.log('🏠 Initializing landing page...');
-      
-      // Set up event listeners
-      this.setupEventListeners();
-
-
-
-      // DEBUG: Check trail guides
-    await this.debugTrailGuides();
-      
-      // Load community stats
-      await this.loadCommunityStats();
-      
-      // Load featured trails
-      await this.loadFeaturedTrails();
-      
-      // Load user stats if logged in
-      this.updateUserStats();
-      
-      console.log('✅ Landing page initialized');
-      
-    } catch (error) {
-      console.error('❌ Landing page initialization failed:', error);
-    }
+async initialize() {
+  try {
+    console.log('Initializing landing page...');
+    
+    this.setupEventListeners();
+    await this.updateLandingAuthStatus();
+    
+    // Load community data
+    await this.loadCommunityStats();
+    await this.loadFeaturedTrails();
+    
+    // Load user stats (now async)
+    await this.updateUserStats();
+    
+    console.log('Landing page initialized');
+    
+  } catch (error) {
+    console.error('Landing page initialization failed:', error);
   }
+}
 
   setupEventListeners() {
     // Quick search
@@ -60,6 +53,7 @@ class LandingPageController {
     window.loadMoreResults = () => this.loadMoreResults();
     window.loadMoreFeatured = () => this.loadMoreFeatured();
     window.viewTrailGuide = (guideId) => this.viewTrailGuide(guideId);
+    window.loadMyTrailGuides = () => this.loadMyTrailGuides();
     
     // Info functions
     window.showAbout = () => this.showAbout();
@@ -114,29 +108,15 @@ async searchTrails() {
     const searchInput = document.getElementById('trailSearch');
     const searchTerm = searchInput?.value?.trim() || this.currentSearch;
     
-    console.log('🔍 Searching trails:', searchTerm || 'all trails');
+    console.log('Searching trails:', searchTerm || 'all trails');
     
-    // Import Firestore functions
-    const { collection, query, where, orderBy, limit, getDocs } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+    const { collection, query, where, getDocs } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
     
-    // Build query - start with public trails
+    // Simple query without orderBy
     let guidesQuery = query(
       collection(db, 'trail_guides'),
-      where('isPublic', '==', true),
-      orderBy('generatedAt', 'desc'),
-      limit(50) // Reasonable limit
+      where('isPublic', '==', true)
     );
-    
-    // Apply wheelchair filter if selected
-    if (this.currentFilters.wheelchairAccess) {
-      guidesQuery = query(
-        collection(db, 'trail_guides'),
-        where('isPublic', '==', true),
-        where('accessibility.wheelchairAccess', '==', this.currentFilters.wheelchairAccess),
-        orderBy('generatedAt', 'desc'),
-        limit(50)
-      );
-    }
     
     const querySnapshot = await getDocs(guidesQuery);
     const guides = [];
@@ -157,6 +137,11 @@ async searchTrails() {
       }
       
       // Apply other filters on client side
+      if (this.currentFilters.wheelchairAccess && 
+          data.accessibility?.wheelchairAccess !== this.currentFilters.wheelchairAccess) {
+        return;
+      }
+      
       if (this.currentFilters.difficulty && 
           data.accessibility?.difficulty !== this.currentFilters.difficulty) {
         return;
@@ -176,14 +161,16 @@ async searchTrails() {
       });
     });
     
-    console.log(`✅ Found ${guides.length} trails matching criteria`);
+    // Sort client-side by creation date (newest first)
+    guides.sort((a, b) => new Date(b.generatedAt) - new Date(a.generatedAt));
+    
+    console.log(`Found ${guides.length} trails matching criteria`);
     this.displayTrailResults(guides);
     this.updateResultsCount(guides.length);
     
   } catch (error) {
-    console.error('❌ Search failed:', error);
+    console.error('Search failed:', error);
     
-    // Show user-friendly error
     const resultsContainer = document.getElementById('trailResults');
     if (resultsContainer) {
       resultsContainer.innerHTML = `
@@ -308,17 +295,14 @@ async searchTrails() {
 // UPDATED: Load community stats without count queries
 async loadCommunityStats() {
   try {
-    console.log('📊 Loading community stats...');
+    console.log('Loading community stats...');
     
-    // Import Firestore functions
-    const { collection, query, where, orderBy, limit, getDocs } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+    const { collection, query, where, getDocs } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
     
-    // Get public guides (limit to reasonable number for stats)
+    // Remove the orderBy to avoid index requirements
     const publicGuidesQuery = query(
       collection(db, 'trail_guides'), 
-      where('isPublic', '==', true),
-      orderBy('generatedAt', 'desc'),
-      limit(1000) // Reasonable limit for stats calculation
+      where('isPublic', '==', true)
     );
     
     const guidesSnapshot = await getDocs(publicGuidesQuery);
@@ -344,36 +328,30 @@ async loadCommunityStats() {
     this.animateNumber('accessibleTrails', accessibleTrails);
     this.animateNumber('totalUsers', uniqueUsers.size);
     
-    console.log('✅ Community stats loaded successfully');
+    console.log('Community stats loaded successfully');
     
   } catch (error) {
-    console.error('❌ Failed to load community stats:', error);
+    console.error('Failed to load community stats:', error);
     
-    // Set default values if still failing
+    // Set default values if failing
     this.updateElement('publicGuides', '0');
     this.updateElement('totalKm', '0');
     this.updateElement('accessibleTrails', '0');
     this.updateElement('totalUsers', '0');
-    
-    // Don't show error to user for stats - it's not critical
-    console.log('Using default stats values');
   }
 }
 
 // UPDATED: Load featured trails with better error handling
 async loadFeaturedTrails() {
   try {
-    console.log('⭐ Loading featured trails...');
+    console.log('Loading featured trails...');
     
-    // Import Firestore functions
-    const { collection, query, where, orderBy, limit, getDocs } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+    const { collection, query, where, getDocs } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
     
-    // Get public trails ordered by creation date (since views might not be set yet)
+    // Simple query without orderBy to avoid index issues
     const featuredQuery = query(
       collection(db, 'trail_guides'),
-      where('isPublic', '==', true),
-      orderBy('generatedAt', 'desc'),
-      limit(6)
+      where('isPublic', '==', true)
     );
     
     const querySnapshot = await getDocs(featuredQuery);
@@ -386,12 +364,17 @@ async loadFeaturedTrails() {
       });
     });
     
-    console.log(`✅ Loaded ${featured.length} featured trails`);
-    this.displayFeaturedTrails(featured);
+    // Sort client-side by creation date (newest first)
+    featured.sort((a, b) => new Date(b.generatedAt) - new Date(a.generatedAt));
+    
+    // Take first 6 for featured display
+    const featuredToShow = featured.slice(0, 6);
+    
+    console.log(`Loaded ${featuredToShow.length} featured trails`);
+    this.displayFeaturedTrails(featuredToShow);
     
   } catch (error) {
-    console.error('❌ Failed to load featured trails:', error);
-    console.log('Showing placeholder for featured trails');
+    console.error('Failed to load featured trails:', error);
     this.showFeaturedPlaceholder();
   }
 }
@@ -460,22 +443,72 @@ async loadFeaturedTrails() {
     }
   }
 
-  updateUserStats() {
-    // Update user-specific stats if logged in
-    const totalRoutes = localStorage.getItem('sessions') ? JSON.parse(localStorage.getItem('sessions')).length : 0;
-    this.updateElement('totalRoutes', totalRoutes);
+async updateUserStats() {
+  try {
+    const authStatus = await this.checkLandingAuth();
     
-    // Calculate total distance from local sessions
-    let totalDistance = 0;
-    try {
-      const sessions = JSON.parse(localStorage.getItem('sessions') || '[]');
-      totalDistance = sessions.reduce((sum, session) => sum + (session.totalDistance || 0), 0);
-    } catch (error) {
-      console.warn('Error calculating total distance:', error);
+    if (authStatus.isSignedIn) {
+      // User is signed in - load their cloud data
+      await this.loadUserCloudStats();
+    } else {
+      // User not signed in - check localStorage only
+      this.loadLocalStats();
     }
-    
-    this.updateElement('totalDistance', totalDistance.toFixed(1));
+  } catch (error) {
+    console.error('Failed to update user stats:', error);
+    // Fallback to local stats
+    this.loadLocalStats();
   }
+}
+
+// Add this new method to load cloud stats
+async loadUserCloudStats() {
+  try {
+    const { collection, query, where, getDocs } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+    const { auth } = await import('../firebase-setup.js');
+    
+    // Get user's routes from Firebase
+    const routesQuery = query(
+      collection(db, 'routes'),
+      where('userId', '==', auth.currentUser.uid)
+    );
+    
+    const routesSnapshot = await getDocs(routesQuery);
+    let totalDistance = 0;
+    
+    routesSnapshot.forEach(doc => {
+      const data = doc.data();
+      totalDistance += data.totalDistance || 0;
+    });
+    
+    // Update display
+    this.updateElement('totalRoutes', routesSnapshot.size);
+    this.updateElement('totalDistance', totalDistance.toFixed(1));
+    
+    console.log(`User stats: ${routesSnapshot.size} routes, ${totalDistance.toFixed(1)} km`);
+    
+  } catch (error) {
+    console.error('Failed to load cloud stats:', error);
+    // Fallback to local stats
+    this.loadLocalStats();
+  }
+}
+
+// Add this method for local stats fallback
+loadLocalStats() {
+  const totalRoutes = localStorage.getItem('sessions') ? JSON.parse(localStorage.getItem('sessions')).length : 0;
+  this.updateElement('totalRoutes', totalRoutes);
+  
+  let totalDistance = 0;
+  try {
+    const sessions = JSON.parse(localStorage.getItem('sessions') || '[]');
+    totalDistance = sessions.reduce((sum, session) => sum + (session.totalDistance || 0), 0);
+  } catch (error) {
+    console.warn('Error calculating total distance:', error);
+  }
+  
+  this.updateElement('totalDistance', totalDistance.toFixed(1));
+}
 
   // Utility Functions
   updateElement(id, value) {
@@ -885,6 +918,79 @@ async initialize() {
     console.log('✅ Landing page initialized');
   } catch (error) {
     console.error('❌ Landing page initialization failed:', error);
+  }
+}
+
+async loadMyTrailGuides() {
+  try {
+    console.log('🌐 Loading trail guides from landing page...');
+    
+    // Check if user is signed in
+    const authStatus = await this.checkLandingAuth();
+    if (!authStatus.isSignedIn) {
+      alert('Please sign in first to view your trail guides');
+      return;
+    }
+
+    // Import Firestore functions
+    const { collection, query, where, orderBy, getDocs } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+    const { db, auth } = await import('../firebase-setup.js');
+    
+    // Query user's trail guides
+    const guidesQuery = query(
+      collection(db, 'trail_guides'),
+      where('userId', '==', auth.currentUser.uid),
+      orderBy('generatedAt', 'desc')
+    );
+    
+    const querySnapshot = await getDocs(guidesQuery);
+    const guides = [];
+    
+    querySnapshot.forEach(doc => {
+      guides.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
+    console.log(`Found ${guides.length} trail guides`);
+    
+    if (guides.length === 0) {
+      alert('No trail guides found.\n\nTo create trail guides:\n• Record a route in the tracker\n• Save it to cloud\n• Trail guide will be auto-generated');
+      return;
+    }
+    
+    this.displayLandingGuides(guides);
+    
+  } catch (error) {
+    console.error('Failed to load trail guides:', error);
+    alert('Failed to load trail guides: ' + error.message);
+  }
+}
+
+// Add this method too
+displayLandingGuides(guides) {
+  let message = 'Your Trail Guides:\n\n';
+  
+  guides.forEach((guide, index) => {
+    const date = new Date(guide.generatedAt).toLocaleDateString();
+    const visibility = guide.isPublic ? 'Public' : 'Private';
+    
+    message += `${index + 1}. ${guide.routeName} (${visibility})\n`;
+    message += `   Created: ${date}\n`;
+    if (guide.metadata) {
+      message += `   Distance: ${(guide.metadata.totalDistance || 0).toFixed(1)} km\n`;
+    }
+    message += '\n';
+  });
+
+  message += `Select a guide to view (1-${guides.length}), or 0 to cancel:`;
+  
+  const choice = prompt(message);
+  const choiceNum = parseInt(choice);
+  
+  if (choiceNum >= 1 && choiceNum <= guides.length) {
+    this.viewTrailGuide(guides[choiceNum - 1].id);
   }
 }
 }

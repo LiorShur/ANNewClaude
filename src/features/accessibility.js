@@ -1,4 +1,4 @@
-// Accessibility form functionality
+// Enhanced accessibility form functionality with comprehensive survey
 export class AccessibilityForm {
   constructor() {
     this.isOpen = false;
@@ -21,13 +21,14 @@ export class AccessibilityForm {
     container.innerHTML = `
       <div class="container">
         <div class="header">
-          <h1>🌲 Accessibility Survey</h1>
-          <p>Help others find accessible outdoor experiences</p>
+          <h1>🌲 Comprehensive Trail Accessibility Survey</h1>
+          <p>Help create detailed accessibility information for outdoor spaces</p>
         </div>
 
         <form class="form-container accessibility-form" id="accessibilityForm">
           <button type="button" class="btn-secondary" onclick="closeAccessibilityForm()">✖ Close</button>
           
+          <!-- Basic Trail Information -->
           <div class="section">
             <div class="section-header" onclick="toggleSection(this)">
               <h2>🗺️ Basic Trail Information</h2>
@@ -63,9 +64,55 @@ export class AccessibilityForm {
                   </select>
                 </div>
               </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Trip Type</label>
+                  <div class="radio-group">
+                    <div class="radio-item">
+                      <input type="radio" id="tripBeach" name="tripType" value="Beach Promenade">
+                      <label for="tripBeach">Beach Promenade</label>
+                    </div>
+                    <div class="radio-item">
+                      <input type="radio" id="tripStream" name="tripType" value="Stream Path">
+                      <label for="tripStream">Stream Path</label>
+                    </div>
+                    <div class="radio-item">
+                      <input type="radio" id="tripPark" name="tripType" value="Park Route">
+                      <label for="tripPark">Park Route</label>
+                    </div>
+                    <div class="radio-item">
+                      <input type="radio" id="tripForest" name="tripType" value="Forest Trail">
+                      <label for="tripForest">Forest Trail</label>
+                    </div>
+                    <div class="radio-item">
+                      <input type="radio" id="tripUrban" name="tripType" value="Urban Route">
+                      <label for="tripUrban">Urban Route</label>
+                    </div>
+                    <div class="radio-item">
+                      <input type="radio" id="tripScenic" name="tripType" value="Scenic Drive">
+                      <label for="tripScenic">Scenic Drive</label>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Route Type</label>
+                  <div class="radio-group">
+                    <div class="radio-item">
+                      <input type="radio" id="routeCircular" name="routeType" value="Circular">
+                      <label for="routeCircular">Circular</label>
+                    </div>
+                    <div class="radio-item">
+                      <input type="radio" id="routeRoundTrip" name="routeType" value="Round Trip">
+                      <label for="routeRoundTrip">Round Trip</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
+          <!-- Mobility Accessibility -->
           <div class="section">
             <div class="section-header" onclick="toggleSection(this)">
               <h2>♿ Mobility Accessibility</h2>
@@ -84,8 +131,8 @@ export class AccessibilityForm {
                     <label for="wheelchairPartial">Partially accessible</label>
                   </div>
                   <div class="radio-item">
-                    <input type="radio" id="wheelchairAssist" name="wheelchairAccess" value="With assistance">
-                    <label for="wheelchairAssist">With assistance</label>
+                    <input type="radio" id="wheelchairAssist" name="wheelchairAccess" value="Accessible with assistance">
+                    <label for="wheelchairAssist">Accessible with assistance</label>
                   </div>
                   <div class="radio-item">
                     <input type="radio" id="wheelchairNot" name="wheelchairAccess" value="Not accessible">
@@ -93,9 +140,298 @@ export class AccessibilityForm {
                   </div>
                 </div>
               </div>
+
+              <div class="form-group">
+                <label>Disabled Parking</label>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>
+                      <input type="checkbox" name="disabledParking" value="Available"> Disabled parking available
+                    </label>
+                  </div>
+                  <div class="form-group">
+                    <label for="parkingSpaces">Number of spaces</label>
+                    <input type="number" id="parkingSpaces" name="parkingSpaces" min="0">
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
+          <!-- Trail Surface & Quality -->
+          <div class="section">
+            <div class="section-header" onclick="toggleSection(this)">
+              <h2>🛤️ Trail Surface & Quality</h2>
+              <span class="toggle-icon">▼</span>
+            </div>
+            <div class="section-content">
+              <div class="form-group">
+                <label>Trail Surface Types (select all that apply)</label>
+                <div class="checkbox-group">
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="surfaceAsphalt" name="trailSurface" value="Asphalt">
+                    <label for="surfaceAsphalt">Asphalt</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="surfaceConcrete" name="trailSurface" value="Concrete">
+                    <label for="surfaceConcrete">Concrete</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="surfaceStone" name="trailSurface" value="Stone">
+                    <label for="surfaceStone">Stone</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="surfaceWood" name="trailSurface" value="Wood/Plastic Deck">
+                    <label for="surfaceWood">Wood/Plastic Deck</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="surfaceGravel" name="trailSurface" value="Compacted Gravel">
+                    <label for="surfaceGravel">Compacted Gravel</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="surfaceMixed" name="trailSurface" value="Mixed Surfaces">
+                    <label for="surfaceMixed">Mixed Surfaces</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="surfaceGrass" name="trailSurface" value="Grass">
+                    <label for="surfaceGrass">Grass</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Surface Quality</label>
+                <div class="radio-group">
+                  <div class="radio-item">
+                    <input type="radio" id="qualityExcellent" name="surfaceQuality" value="Excellent - smooth and well maintained">
+                    <label for="qualityExcellent">Excellent - smooth and well maintained</label>
+                  </div>
+                  <div class="radio-item">
+                    <input type="radio" id="qualityFair" name="surfaceQuality" value="Fair - minor disruptions, rough patches, bumps, cracks">
+                    <label for="qualityFair">Fair - minor disruptions, rough patches, bumps, cracks</label>
+                  </div>
+                  <div class="radio-item">
+                    <input type="radio" id="qualityPoor" name="surfaceQuality" value="Poor - serious disruptions, protruding stones, large grooves">
+                    <label for="qualityPoor">Poor - serious disruptions, protruding stones, large grooves</label>
+                  </div>
+                  <div class="radio-item">
+                    <input type="radio" id="qualityBlocked" name="surfaceQuality" value="Vegetation blocks passage">
+                    <label for="qualityBlocked">Vegetation blocks passage</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Trail Slopes</label>
+                <div class="radio-group">
+                  <div class="radio-item">
+                    <input type="radio" id="slopeNone" name="trailSlopes" value="No slopes to mild slopes (up to 5%)">
+                    <label for="slopeNone">No slopes to mild slopes (up to 5%)</label>
+                  </div>
+                  <div class="radio-item">
+                    <input type="radio" id="slopeModerate" name="trailSlopes" value="Moderate slopes - assistance recommended (5%-10%)">
+                    <label for="slopeModerate">Moderate slopes - assistance recommended (5%-10%)</label>
+                  </div>
+                  <div class="radio-item">
+                    <input type="radio" id="slopeSteep" name="trailSlopes" value="Steep slopes - not accessible (over 10%)">
+                    <label for="slopeSteep">Steep slopes - not accessible (over 10%)</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Visual & Environmental Features -->
+          <div class="section">
+            <div class="section-header" onclick="toggleSection(this)">
+              <h2>👁️ Visual & Environmental Features</h2>
+              <span class="toggle-icon">▼</span>
+            </div>
+            <div class="section-content">
+              <div class="form-group">
+                <label>Visual Impairment Adaptations (select all that apply)</label>
+                <div class="checkbox-group">
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="visualRaised" name="visualAdaptations" value="Raised/protruding borders">
+                    <label for="visualRaised">Raised/protruding borders</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="visualTexture" name="visualAdaptations" value="Texture/tactile differences">
+                    <label for="visualTexture">Texture/tactile differences</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="visualColor" name="visualAdaptations" value="Color contrast differences">
+                    <label for="visualColor">Color contrast differences</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Shade Coverage on Trail</label>
+                <div class="radio-group">
+                  <div class="radio-item">
+                    <input type="radio" id="shadePlenty" name="shadeCoverage" value="Plenty of shade">
+                    <label for="shadePlenty">Plenty of shade</label>
+                  </div>
+                  <div class="radio-item">
+                    <input type="radio" id="shadeIntermittent" name="shadeCoverage" value="Intermittent shade">
+                    <label for="shadeIntermittent">Intermittent shade</label>
+                  </div>
+                  <div class="radio-item">
+                    <input type="radio" id="shadeNone" name="shadeCoverage" value="No shade">
+                    <label for="shadeNone">No shade</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" name="lighting" value="Trail is lit in darkness"> Trail is lit in darkness
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Facilities & Amenities -->
+          <div class="section">
+            <div class="section-header" onclick="toggleSection(this)">
+              <h2>🚰 Facilities & Amenities</h2>
+              <span class="toggle-icon">▼</span>
+            </div>
+            <div class="section-content">
+              <div class="form-group">
+                <label>Accessible Water Fountains</label>
+                <div class="radio-group">
+                  <div class="radio-item">
+                    <input type="radio" id="fountainNone" name="waterFountains" value="None">
+                    <label for="fountainNone">None</label>
+                  </div>
+                  <div class="radio-item">
+                    <input type="radio" id="fountainOne" name="waterFountains" value="One accessible fountain">
+                    <label for="fountainOne">One accessible fountain</label>
+                  </div>
+                  <div class="radio-item">
+                    <input type="radio" id="fountainMultiple" name="waterFountains" value="Multiple fountains along route">
+                    <label for="fountainMultiple">Multiple fountains along route</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Accessible Seating</label>
+                <div class="checkbox-group">
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="benchNone" name="seating" value="No accessible benches">
+                    <label for="benchNone">No accessible benches</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="benchOne" name="seating" value="One accessible bench">
+                    <label for="benchOne">One accessible bench</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="benchMultiple" name="seating" value="Multiple benches along route">
+                    <label for="benchMultiple">Multiple benches along route</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="benchNoRails" name="seating" value="Benches without handrails">
+                    <label for="benchNoRails">Benches without handrails</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Accessible Picnic Areas</label>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>
+                      <input type="checkbox" name="picnicAreas" value="Available"> Accessible picnic areas available
+                    </label>
+                  </div>
+                  <div class="form-group">
+                    <label for="picnicCount">Number of areas</label>
+                    <input type="number" id="picnicCount" name="picnicCount" min="0">
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="picnicShade">Areas in shade</label>
+                    <input type="number" id="picnicShade" name="picnicShade" min="0">
+                  </div>
+                  <div class="form-group">
+                    <label for="picnicSun">Areas in sun</label>
+                    <input type="number" id="picnicSun" name="picnicSun" min="0">
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" name="accessibleViewpoint" value="Available"> Accessible viewpoint available
+                </label>
+              </div>
+
+              <div class="form-group">
+                <label>Accessible Restrooms</label>
+                <div class="radio-group">
+                  <div class="radio-item">
+                    <input type="radio" id="restroomNone" name="restrooms" value="None">
+                    <label for="restroomNone">None</label>
+                  </div>
+                  <div class="radio-item">
+                    <input type="radio" id="restroomUnisex" name="restrooms" value="One unisex accessible restroom">
+                    <label for="restroomUnisex">One unisex accessible restroom</label>
+                  </div>
+                  <div class="radio-item">
+                    <input type="radio" id="restroomSeparate" name="restrooms" value="Separate accessible restrooms for men and women">
+                    <label for="restroomSeparate">Separate accessible restrooms for men and women</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Signage & Navigation -->
+          <div class="section">
+            <div class="section-header" onclick="toggleSection(this)">
+              <h2>🗺️ Signage & Navigation</h2>
+              <span class="toggle-icon">▼</span>
+            </div>
+            <div class="section-content">
+              <div class="form-group">
+                <label>Available Signage (select all that apply)</label>
+                <div class="checkbox-group">
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="signageMap" name="signage" value="Route map available">
+                    <label for="signageMap">Route map available</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="signageDirectional" name="signage" value="Clear directional signage">
+                    <label for="signageDirectional">Clear directional signage</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="signageSimple" name="signage" value="Simple language signage">
+                    <label for="signageSimple">Simple language signage</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="signageAccessible" name="signage" value="Large, high-contrast accessible signage">
+                    <label for="signageAccessible">Large, high-contrast accessible signage</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="signageAudio" name="signage" value="Audio explanation compatible with T-mode hearing devices">
+                    <label for="signageAudio">Audio explanation compatible with T-mode hearing devices</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" name="qrCode" value="Available"> QR code with site information available
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Additional Information -->
           <div class="section">
             <div class="section-header" onclick="toggleSection(this)">
               <h2>📝 Additional Information</h2>
@@ -117,19 +453,42 @@ export class AccessibilityForm {
                   <input type="date" id="surveyDate" name="surveyDate">
                 </div>
               </div>
+
+              <div class="form-group">
+                <label>Overall Accessibility Summary</label>
+                <div class="radio-group">
+                  <div class="radio-item">
+                    <input type="radio" id="summaryAccessible" name="accessibilitySummary" value="Accessible">
+                    <label for="summaryAccessible">Accessible</label>
+                  </div>
+                  <div class="radio-item">
+                    <input type="radio" id="summaryPartial" name="accessibilitySummary" value="Partially accessible">
+                    <label for="summaryPartial">Partially accessible</label>
+                  </div>
+                  <div class="radio-item">
+                    <input type="radio" id="summaryAssistance" name="accessibilitySummary" value="Accessible with assistance">
+                    <label for="summaryAssistance">Accessible with assistance</label>
+                  </div>
+                  <div class="radio-item">
+                    <input type="radio" id="summaryNotAccessible" name="accessibilitySummary" value="Not accessible">
+                    <label for="summaryNotAccessible">Not accessible</label>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
           <div class="submit-section">
-            <button type="submit" class="submit-btn">✅ Save Survey</button>
+            <button type="submit" class="submit-btn">✅ Save Comprehensive Survey</button>
             <button type="button" class="btn-secondary" onclick="closeAccessibilityForm()">❌ Cancel</button>
-            <p style="color: white; margin-top: 15px; opacity: 0.9;">Thank you for helping make nature accessible to everyone!</p>
+            <p style="color: white; margin-top: 15px; opacity: 0.9;">Thank you for contributing detailed accessibility information!</p>
           </div>
         </form>
       </div>
     `;
   }
 
+  // ... rest of the methods remain the same ...
   setupEventListeners() {
     const overlay = document.getElementById('accessibilityOverlay');
     if (!overlay) return;
@@ -151,29 +510,27 @@ export class AccessibilityForm {
     window.toggleSection = this.toggleSection;
   }
 
-  toggleSection(header) {
-    const content = header.nextElementSibling;
-    const icon = header.querySelector('.toggle-icon');
-    
-    if (content.classList.contains('active')) {
-      content.classList.remove('active');
-      content.style.display = 'none';
-      icon.classList.remove('rotated');
-    } else {
-      content.classList.add('active');
-      content.style.display = 'block';
-      icon.classList.add('rotated');
-    }
-  }
-
   handleFormSubmit(event) {
     event.preventDefault();
     
     const formData = new FormData(event.target);
     const data = {};
 
+    // Handle checkboxes specially
+    const checkboxes = event.target.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+      const name = checkbox.name;
+      if (checkbox.checked) {
+        if (!data[name]) data[name] = [];
+        data[name].push(checkbox.value);
+      }
+    });
+
+    // Handle other inputs
     for (const [key, value] of formData.entries()) {
-      data[key] = value;
+      if (!data[key]) {
+        data[key] = value;
+      }
     }
 
     // Validate required fields
@@ -189,8 +546,8 @@ export class AccessibilityForm {
     this.formData = data;
     localStorage.setItem("accessibilityData", JSON.stringify(data));
     
-    console.log('Accessibility survey data:', data);
-    alert('Survey saved successfully! Thank you for your contribution.');
+    console.log('Comprehensive accessibility survey data:', data);
+    alert('Comprehensive survey saved successfully! Thank you for your detailed contribution.');
 
     if (this.currentCallback) {
       const callback = this.currentCallback;
@@ -199,6 +556,21 @@ export class AccessibilityForm {
     }
 
     this.close();
+  }
+
+  toggleSection(header) {
+    const content = header.nextElementSibling;
+    const icon = header.querySelector('.toggle-icon');
+    
+    if (content.classList.contains('active')) {
+      content.classList.remove('active');
+      content.style.display = 'none';
+      icon.classList.remove('rotated');
+    } else {
+      content.classList.add('active');
+      content.style.display = 'block';
+      icon.classList.add('rotated');
+    }
   }
 
   open(callback) {
@@ -237,13 +609,23 @@ export class AccessibilityForm {
       if (!form) return;
 
       Object.entries(data).forEach(([key, value]) => {
-        const field = form.elements[key];
-        if (field) {
-          if (field.type === 'radio') {
-            const radio = form.querySelector(`input[name="${key}"][value="${value}"]`);
-            if (radio) radio.checked = true;
-          } else {
-            field.value = value;
+        if (Array.isArray(value)) {
+          // Handle checkbox arrays
+          value.forEach(val => {
+            const checkbox = form.querySelector(`input[name="${key}"][value="${val}"]`);
+            if (checkbox) checkbox.checked = true;
+          });
+        } else {
+          const field = form.elements[key];
+          if (field) {
+            if (field.type === 'radio') {
+              const radio = form.querySelector(`input[name="${key}"][value="${value}"]`);
+              if (radio) radio.checked = true;
+            } else if (field.type === 'checkbox') {
+              field.checked = true;
+            } else {
+              field.value = value;
+            }
           }
         }
       });
