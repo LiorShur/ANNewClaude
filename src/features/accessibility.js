@@ -9,7 +9,37 @@ export class AccessibilityForm {
   initialize() {
     this.loadFormHTML();
     this.setupEventListeners();
+    this.finalMobileFix();    
   }
+
+  finalMobileFix() {
+  const container = document.getElementById('accessibilityFormContainer');
+  if (!container) return;
+  
+  const availableWidth = container.clientWidth - 20;
+  
+  const elements = container.querySelectorAll(`
+    .container, .header, h1, p, form, .section, .section-header, 
+    .section-content, .submit-section, button, .btn-secondary, .submit-btn
+  `);
+  
+  elements.forEach(el => {
+    el.style.setProperty('max-width', availableWidth + 'px', 'important');
+    el.style.setProperty('width', '100%', 'important');
+    el.style.setProperty('box-sizing', 'border-box', 'important');
+    el.style.setProperty('padding-left', '5px', 'important');
+    el.style.setProperty('padding-right', '5px', 'important');
+    el.style.setProperty('margin-left', '0', 'important');
+    el.style.setProperty('margin-right', '0', 'important');
+    
+    if (el.tagName === 'H1' || el.tagName === 'H2' || el.tagName === 'P') {
+      el.style.setProperty('white-space', 'normal', 'important');
+      el.style.setProperty('word-wrap', 'break-word', 'important');
+      el.style.setProperty('overflow-wrap', 'break-word', 'important');
+      el.style.setProperty('hyphens', 'auto', 'important');
+    }
+  });
+}
 
   loadFormHTML() {
     const container = document.getElementById('accessibilityFormContainer');
@@ -585,6 +615,7 @@ export class AccessibilityForm {
     }
 
     this.prefillForm();
+    setTimeout(() => this.finalMobileFix(), 100);
   }
 
   close() {

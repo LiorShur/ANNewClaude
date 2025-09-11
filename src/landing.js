@@ -12,22 +12,20 @@ class LandingPageController {
 
 async initialize() {
   try {
-    console.log('Initializing landing page...');
+    console.log('🏠 Initializing landing page...');
     
     this.setupEventListeners();
     await this.updateLandingAuthStatus();
-    
-    // Load community data
     await this.loadCommunityStats();
     await this.loadFeaturedTrails();
+    this.updateUserStats();
     
-    // Load user stats (now async)
-    await this.updateUserStats();
+    // Make this instance globally available for modal functions
+    window.landingAuth = this;
     
-    console.log('Landing page initialized');
-    
+    console.log('✅ Landing page initialized');
   } catch (error) {
-    console.error('Landing page initialization failed:', error);
+    console.error('❌ Landing page initialization failed:', error);
   }
 }
 
@@ -994,6 +992,784 @@ displayLandingGuides(guides) {
   }
 }
 }
+
+// FIXED: Landing page authentication integration
+// Add this to the bottom of your landing.js file or create a separate auth-landing.js
+
+class LandingAuthController {
+  constructor() {
+    this.authModal = null;
+    this.currentUser = null;
+  }
+
+  async initialize() {
+    console.log('🔐 Initializing landing page authentication...');
+    
+    // Set up auth state listener first
+    await this.setupAuthStateListener();
+    
+    // Set up event listeners
+    this.setupEventListeners();
+    
+    // Update UI based on current auth state
+    await this.updateAuthStatus();
+    
+    console.log('✅ Landing page authentication initialized');
+  }
+
+  setupEventListeners() {
+    // FIXED: Sign in button event listener
+    const showAuthBtn = document.getElementById('showAuthBtn');
+    if (showAuthBtn) {
+      console.log('🔧 Setting up sign-in button listener...');
+      
+      // Remove any existing listeners
+      const newBtn = showAuthBtn.cloneNode(true);
+      showAuthBtn.parentNode.replaceChild(newBtn, showAuthBtn);
+      
+      // Add our listener
+      newBtn.addEventListener('click', (e) => {
+        console.log('🔑 Sign in button clicked');
+        e.preventDefault();
+        e.stopPropagation();
+        this.showAuthModal();
+      });
+      
+      console.log('✅ Sign-in button listener attached');
+    } else {
+      console.error('❌ Sign-in button not found');
+    }
+
+    // Logout button
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.handleLogout();
+      });
+    }
+
+    // Modal close handlers
+    this.setupModalEventListeners();
+  }
+
+setupModalEventListeners() {
+  // Handle login form
+  const loginForm = document.getElementById('loginFormEl');
+  if (loginForm) {
+    loginForm.addEventListener('submit', (e) => this.handleLogin(e));
+  }
+  
+  // Handle signup form
+  const signupForm = document.getElementById('signupFormEl');
+  if (signupForm) {
+    signupForm.addEventListener('submit', (e) => this.handleSignup(e));
+  }
+  
+  // Close modal when clicking background
+  const modal = document.getElementById('authModal');
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target.id === 'authModal') {
+        this.closeAuthModal();
+      }
+    });
+  }
+}
+
+  async setupAuthStateListener() {
+    try {
+      // Import Firebase auth
+      const { onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js");
+      const { auth } = await import('../firebase-setup.js');
+      
+      onAuthStateChanged(auth, (user) => {
+        this.currentUser = user;
+        this.updateAuthStatus();
+        
+        if (user) {
+          console.log('✅ User signed in:', user.email);
+        } else {
+          console.log('👋 User signed out');
+        }
+      });
+      
+    } catch (error) {
+      console.error('❌ Failed to setup auth listener:', error);
+    }
+  }
+
+showAuthModal() {
+  console.log('📱 Opening auth modal (permanent fix)...');
+  
+  // Remove any existing modal to start fresh
+  const existingModal = document.getElementById('authModal');
+  if (existingModal) {
+    existingModal.remove();
+  }
+  
+  // Create the working modal structure
+  this.createWorkingAuthModal();
+  
+  // Show the modal
+  const modal = document.getElementById('authModal');
+  if (modal) {
+    modal.style.display = 'flex';
+    console.log('✅ Auth modal opened successfully');
+    
+    // Focus on first input for accessibility
+    setTimeout(() => {
+      const firstInput = modal.querySelector('input[type="email"]');
+      if (firstInput) {
+        firstInput.focus();
+      }
+    }, 100);
+    
+    return true;
+  } else {
+    console.error('❌ Failed to create auth modal');
+    return false;
+  }
+}
+
+showLoginForm() {
+  const loginForm = document.getElementById('loginFormContent');
+  const signupForm = document.getElementById('signupFormContent');
+  const title = document.getElementById('authTitle');
+  
+  if (loginForm) loginForm.style.display = 'block';
+  if (signupForm) signupForm.style.display = 'none';
+  if (title) title.textContent = 'Welcome Back!';
+}
+
+showSignupForm() {
+  const loginForm = document.getElementById('loginFormContent');
+  const signupForm = document.getElementById('signupFormContent');
+  const title = document.getElementById('authTitle');
+  
+  if (signupForm) signupForm.style.display = 'block';
+  if (loginForm) loginForm.style.display = 'none';
+  if (title) title.textContent = 'Join Access Nature';
+}
+
+  closeAuthModal() {
+  const modal = document.getElementById('authModal');
+  if (modal) {
+    modal.remove(); // Completely remove it
+    console.log('✅ Auth modal closed and removed');
+  }
+}
+
+  createWorkingAuthModal() {
+  const modalHTML = `
+    <div id="authModal" style="
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(10px);
+    ">
+      <div class="auth-container" style="
+        background: white;
+        border-radius: 20px;
+        width: 90%;
+        max-width: 420px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+        position: relative;
+        z-index: 100000;
+      ">
+        <!-- Header -->
+        <div class="auth-header" style="
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          padding: 25px;
+          text-align: center;
+          position: relative;
+          border-radius: 20px 20px 0 0;
+        ">
+          <h2 id="authTitle" style="
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 600;
+          ">Welcome to Access Nature</h2>
+          <button onclick="window.landingAuth.closeAuthModal()" style="
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          ">✕</button>
+        </div>
+        
+        <!-- Login Form -->
+        <div id="loginFormContent" class="form-content" style="padding: 30px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h3 style="margin: 0 0 8px 0; font-size: 1.4rem; color: #333;">Sign In to Your Account</h3>
+            <p style="margin: 0; color: #666; font-size: 0.95rem;">Continue your accessibility mapping journey</p>
+          </div>
+          
+          <form id="loginFormEl" style="margin-bottom: 25px;">
+            <div style="margin-bottom: 20px; position: relative;">
+              <input type="email" id="loginEmailInput" placeholder="Email address" required style="
+                width: 100%;
+                padding: 15px 20px 15px 50px;
+                border: 2px solid #e1e5e9;
+                border-radius: 12px;
+                font-size: 16px;
+                background: #f8f9fa;
+                box-sizing: border-box;
+              ">
+              <span style="
+                position: absolute;
+                left: 18px;
+                top: 50%;
+                transform: translateY(-50%);
+                font-size: 18px;
+              ">📧</span>
+            </div>
+            
+            <div style="margin-bottom: 20px; position: relative;">
+              <input type="password" id="loginPasswordInput" placeholder="Password" required style="
+                width: 100%;
+                padding: 15px 20px 15px 50px;
+                border: 2px solid #e1e5e9;
+                border-radius: 12px;
+                font-size: 16px;
+                background: #f8f9fa;
+                box-sizing: border-box;
+              ">
+              <span style="
+                position: absolute;
+                left: 18px;
+                top: 50%;
+                transform: translateY(-50%);
+                font-size: 18px;
+              ">🔒</span>
+            </div>
+            
+            <button type="submit" id="loginSubmitBtn" style="
+              width: 100%;
+              padding: 16px;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              border: none;
+              border-radius: 12px;
+              font-size: 16px;
+              font-weight: 600;
+              cursor: pointer;
+              margin-bottom: 20px;
+            ">
+              <span class="btn-text">Sign In</span>
+              <span class="btn-spinner hidden">⏳</span>
+            </button>
+          </form>
+          
+          <div style="text-align: center; margin: 25px 0; position: relative;">
+            <span style="
+              background: white;
+              padding: 0 20px;
+              color: #666;
+              font-size: 14px;
+            ">or</span>
+            <div style="
+              position: absolute;
+              top: 50%;
+              left: 0;
+              right: 0;
+              height: 1px;
+              background: #e1e5e9;
+              z-index: -1;
+            "></div>
+          </div>
+          
+          <button onclick="window.landingAuth.handleGoogleAuth()" style="
+            width: 100%;
+            padding: 14px;
+            background: white;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 15px;
+            cursor: pointer;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+          ">
+            <span>Continue with Google</span>
+          </button>
+          
+          <div style="text-align: center; padding-top: 20px; border-top: 1px solid #e1e5e9;">
+            <p style="margin: 0; color: #666; font-size: 14px;">
+              Don't have an account? 
+              <button type="button" onclick="window.landingAuth.showSignupForm()" style="
+                background: none;
+                border: none;
+                color: #667eea;
+                font-weight: 600;
+                cursor: pointer;
+                text-decoration: underline;
+                font-size: 14px;
+              ">Sign up</button>
+            </p>
+          </div>
+        </div>
+        
+        <!-- Signup Form (hidden initially) -->
+        <div id="signupFormContent" class="form-content" style="padding: 30px; display: none;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h3 style="margin: 0 0 8px 0; font-size: 1.4rem; color: #333;">Create Your Account</h3>
+            <p style="margin: 0; color: #666; font-size: 0.95rem;">Join the community making nature accessible</p>
+          </div>
+          
+          <form id="signupFormEl" style="margin-bottom: 25px;">
+            <div style="margin-bottom: 20px; position: relative;">
+              <input type="text" id="signupNameInput" placeholder="Full name" required style="
+                width: 100%;
+                padding: 15px 20px 15px 50px;
+                border: 2px solid #e1e5e9;
+                border-radius: 12px;
+                font-size: 16px;
+                background: #f8f9fa;
+                box-sizing: border-box;
+              ">
+              <span style="
+                position: absolute;
+                left: 18px;
+                top: 50%;
+                transform: translateY(-50%);
+                font-size: 18px;
+              ">👤</span>
+            </div>
+            
+            <div style="margin-bottom: 20px; position: relative;">
+              <input type="email" id="signupEmailInput" placeholder="Email address" required style="
+                width: 100%;
+                padding: 15px 20px 15px 50px;
+                border: 2px solid #e1e5e9;
+                border-radius: 12px;
+                font-size: 16px;
+                background: #f8f9fa;
+                box-sizing: border-box;
+              ">
+              <span style="
+                position: absolute;
+                left: 18px;
+                top: 50%;
+                transform: translateY(-50%);
+                font-size: 18px;
+              ">📧</span>
+            </div>
+            
+            <div style="margin-bottom: 20px; position: relative;">
+              <input type="password" id="signupPasswordInput" placeholder="Create password" required style="
+                width: 100%;
+                padding: 15px 20px 15px 50px;
+                border: 2px solid #e1e5e9;
+                border-radius: 12px;
+                font-size: 16px;
+                background: #f8f9fa;
+                box-sizing: border-box;
+              ">
+              <span style="
+                position: absolute;
+                left: 18px;
+                top: 50%;
+                transform: translateY(-50%);
+                font-size: 18px;
+              ">🔒</span>
+            </div>
+            
+            <button type="submit" id="signupSubmitBtn" style="
+              width: 100%;
+              padding: 16px;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              border: none;
+              border-radius: 12px;
+              font-size: 16px;
+              font-weight: 600;
+              cursor: pointer;
+              margin-bottom: 20px;
+            ">
+              <span class="btn-text">Create Account</span>
+              <span class="btn-spinner hidden">⏳</span>
+            </button>
+          </form>
+          
+          <div style="text-align: center; margin: 25px 0; position: relative;">
+            <span style="
+              background: white;
+              padding: 0 20px;
+              color: #666;
+              font-size: 14px;
+            ">or</span>
+            <div style="
+              position: absolute;
+              top: 50%;
+              left: 0;
+              right: 0;
+              height: 1px;
+              background: #e1e5e9;
+              z-index: -1;
+            "></div>
+          </div>
+          
+          <button onclick="window.landingAuth.handleGoogleAuth()" style="
+            width: 100%;
+            padding: 14px;
+            background: white;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 15px;
+            cursor: pointer;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+          ">
+            <span>Continue with Google</span>
+          </button>
+          
+          <div style="text-align: center; padding-top: 20px; border-top: 1px solid #e1e5e9;">
+            <p style="margin: 0; color: #666; font-size: 14px;">
+              Already have an account? 
+              <button type="button" onclick="window.landingAuth.showLoginForm()" style="
+                background: none;
+                border: none;
+                color: #667eea;
+                font-weight: 600;
+                cursor: pointer;
+                text-decoration: underline;
+                font-size: 14px;
+              ">Sign in</button>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  
+  // Setup event listeners immediately
+  this.setupModalEventListeners();
+  
+  console.log('✅ Working auth modal created with event listeners');
+}
+
+  switchToLogin() {
+    const loginForm = document.getElementById('loginForm');
+    const signupForm = document.getElementById('signupForm');
+    const title = document.getElementById('authModalTitle');
+
+    if (loginForm) loginForm.classList.add('active');
+    if (signupForm) signupForm.classList.remove('active');
+    if (title) title.textContent = 'Welcome Back!';
+  }
+
+  switchToSignup() {
+    const loginForm = document.getElementById('loginForm');
+    const signupForm = document.getElementById('signupForm');
+    const title = document.getElementById('authModalTitle');
+
+    if (signupForm) signupForm.classList.add('active');
+    if (loginForm) loginForm.classList.remove('active');
+    if (title) title.textContent = 'Join Access Nature';
+  }
+
+async handleLogin(event) {
+  event.preventDefault();
+  
+  const loginBtn = document.getElementById('loginSubmitBtn');
+  const emailInput = document.getElementById('loginEmailInput');
+  const passwordInput = document.getElementById('loginPasswordInput');
+  
+  if (!emailInput?.value || !passwordInput?.value) {
+    this.showAuthError('Please fill in all fields');
+    return;
+  }
+
+  try {
+    this.setButtonLoading(loginBtn, true);
+    
+    const { signInWithEmailAndPassword } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js");
+    const { auth } = await import('../firebase-setup.js');
+    
+    const userCredential = await signInWithEmailAndPassword(
+      auth, 
+      emailInput.value, 
+      passwordInput.value
+    );
+    
+    console.log('✅ Login successful:', userCredential.user.email);
+    this.closeAuthModal();
+    this.showSuccessMessage('Welcome back! 🎉');
+    
+  } catch (error) {
+    console.error('❌ Login failed:', error);
+    this.showAuthError(this.getFriendlyErrorMessage(error.code));
+  } finally {
+    this.setButtonLoading(loginBtn, false);
+  }
+}
+
+async handleSignup(event) {
+  event.preventDefault();
+  
+  const signupBtn = document.getElementById('signupSubmitBtn');
+  const nameInput = document.getElementById('signupNameInput');
+  const emailInput = document.getElementById('signupEmailInput');
+  const passwordInput = document.getElementById('signupPasswordInput');
+  
+  if (!nameInput?.value || !emailInput?.value || !passwordInput?.value) {
+    this.showAuthError('Please fill in all fields');
+    return;
+  }
+
+  if (passwordInput.value.length < 6) {
+    this.showAuthError('Password must be at least 6 characters');
+    return;
+  }
+
+  try {
+    this.setButtonLoading(signupBtn, true);
+    
+    const { createUserWithEmailAndPassword } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js");
+    const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+    const { auth, db } = await import('../firebase-setup.js');
+    
+    const userCredential = await createUserWithEmailAndPassword(
+      auth, 
+      emailInput.value, 
+      passwordInput.value
+    );
+    
+    const user = userCredential.user;
+    
+    // Save user profile to Firestore
+    await setDoc(doc(db, "users", user.uid), {
+      uid: user.uid,
+      email: user.email,
+      name: nameInput.value,
+      createdAt: new Date().toISOString(),
+      routesCount: 0,
+      totalDistance: 0
+    });
+    
+    console.log('✅ Signup successful:', user.email);
+    this.closeAuthModal();
+    this.showSuccessMessage('Account created successfully! Welcome to Access Nature! 🌲');
+    
+  } catch (error) {
+    console.error('❌ Signup failed:', error);
+    this.showAuthError(this.getFriendlyErrorMessage(error.code));
+  } finally {
+    this.setButtonLoading(signupBtn, false);
+  }
+}
+
+async handleGoogleAuth() {
+  try {
+    const { GoogleAuthProvider, signInWithPopup } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js");
+    const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+    const { auth, db } = await import('../firebase-setup.js');
+    
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+    
+    // Check if this is a new user and save profile
+    if (result._tokenResponse?.isNewUser) {
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        email: user.email,
+        name: user.displayName || 'Google User',
+        createdAt: new Date().toISOString(),
+        routesCount: 0,
+        totalDistance: 0,
+        provider: 'google'
+      });
+    }
+    
+    console.log('✅ Google sign-in successful:', user.email);
+    this.closeAuthModal();
+    this.showSuccessMessage('Successfully connected with Google! 🎉');
+    
+  } catch (error) {
+    console.error('❌ Google sign-in failed:', error);
+    
+    if (error.code === 'auth/popup-closed-by-user') {
+      this.showAuthError('Sign-in was cancelled');
+    } else {
+      this.showAuthError('Google sign-in failed. Please try again.');
+    }
+  }
+}
+
+  async handleLogout() {
+    try {
+      const confirmed = confirm('Are you sure you want to sign out?');
+      if (!confirmed) return;
+
+      const { signOut } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js");
+      const { auth } = await import('./firebase-setup.js');
+
+      await signOut(auth);
+      console.log('👋 Logout successful');
+      this.showSuccessMessage('See you next time! 👋');
+      
+    } catch (error) {
+      console.error('❌ Logout failed:', error);
+      this.showAuthError('Logout failed. Please try again.');
+    }
+  }
+
+  async updateAuthStatus() {
+    const userInfo = document.getElementById('userInfo');
+    const authPrompt = document.getElementById('authPrompt');
+    const userEmail = document.getElementById('userEmail');
+
+    if (this.currentUser) {
+      // Show user info
+      userInfo?.classList.remove('hidden');
+      authPrompt?.classList.add('hidden');
+      if (userEmail) userEmail.textContent = this.currentUser.email;
+    } else {
+      // Show login prompt
+      userInfo?.classList.add('hidden');
+      authPrompt?.classList.remove('hidden');
+    }
+  }
+
+  // Utility methods
+  setButtonLoading(button, loading) {
+    if (!button) return;
+
+    const textSpan = button.querySelector('.btn-text');
+    const spinnerSpan = button.querySelector('.btn-spinner');
+
+    if (loading) {
+      button.disabled = true;
+      textSpan?.classList.add('hidden');
+      spinnerSpan?.classList.remove('hidden');
+    } else {
+      button.disabled = false;
+      textSpan?.classList.remove('hidden');
+      spinnerSpan?.classList.add('hidden');
+    }
+  }
+
+  showAuthError(message) {
+    this.clearAuthError();
+
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'auth-error';
+    errorDiv.textContent = message;
+    errorDiv.style.cssText = `
+      background: #ffebee;
+      color: #c62828;
+      padding: 12px 20px;
+      border-radius: 8px;
+      margin: 15px 0;
+      font-size: 14px;
+      border: 1px solid #ffcdd2;
+      animation: slideIn 0.3s ease;
+    `;
+
+    const activeForm = document.querySelector('.auth-form.active');
+    if (activeForm) {
+      activeForm.insertBefore(errorDiv, activeForm.firstChild);
+    }
+
+    setTimeout(() => this.clearAuthError(), 5000);
+  }
+
+  clearAuthError() {
+    const existingError = document.querySelector('.auth-error');
+    if (existingError) {
+      existingError.remove();
+    }
+  }
+
+  clearAuthForms() {
+    const inputs = document.querySelectorAll('#authModal input');
+    inputs.forEach(input => input.value = '');
+    this.clearAuthError();
+  }
+
+  showSuccessMessage(message) {
+    const successDiv = document.createElement('div');
+    successDiv.textContent = message;
+    successDiv.style.cssText = `
+      position: fixed;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 25px;
+      z-index: 9999;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 4px 20px rgba(76, 175, 80, 0.4);
+      animation: slideDown 0.3s ease;
+    `;
+
+    document.body.appendChild(successDiv);
+    setTimeout(() => successDiv.remove(), 4000);
+  }
+
+  getFriendlyErrorMessage(errorCode) {
+    const errorMessages = {
+      'auth/user-not-found': 'No account found with this email address',
+      'auth/wrong-password': 'Incorrect password',
+      'auth/email-already-in-use': 'An account with this email already exists',
+      'auth/weak-password': 'Password should be at least 6 characters',
+      'auth/invalid-email': 'Please enter a valid email address',
+      'auth/too-many-requests': 'Too many failed attempts. Please try again later',
+      'auth/network-request-failed': 'Network error. Please check your connection'
+    };
+
+    return errorMessages[errorCode] || 'An unexpected error occurred. Please try again.';
+  }
+}
+
+// Initialize landing page authentication
+document.addEventListener('DOMContentLoaded', async () => {
+  // Wait a bit for Firebase to load
+  setTimeout(async () => {
+    const landingAuth = new LandingAuthController();
+    await landingAuth.initialize();
+    
+    // Make it globally available for debugging
+    window.LandingAuth = landingAuth;
+    
+    console.log('🏠 Landing page authentication ready');
+  }, 500);
+});
+
+// Export for use in other modules
+export { LandingAuthController };
 
 // Initialize landing page when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
