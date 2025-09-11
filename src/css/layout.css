@@ -1,11 +1,11 @@
 /* Layout and positioning */
 
 #map, #map-container {
-  height: 200%;
-  width: 200%;
+  height: 100%;
+  width: 100%;
   position: absolute;
-  top: -50;
-  left: -50;
+  top: 0;
+  left: 0;
 }
 
 .top-bar {
@@ -109,3 +109,4 @@
   padding: 20px;
 
 }
+
