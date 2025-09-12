@@ -78,7 +78,7 @@ async initialize() {
 
   openTracker() {
     // Redirect to main tracker app
-    window.location.href = 'index.html';
+    window.location.href = 'tracker.html';
   }
 
   // Search Functions
@@ -1780,5 +1780,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Make controller available globally
   window.LandingPageController = landingController;
 });
+
 
 export { LandingPageController };
